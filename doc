@@ -6,6 +6,9 @@ qtl = QuesTreL Template Library
 which of course isn't what it really is.
 And the qtl is my own invention)
 
+There are various pieces, hopefully useful in themselves, which come together into
+what I think of as an abstract version of std::map, where the key can be an arbirtary predicate,
+and the value can be an arbitrary container
 
 A qtl::container object is analogous to a std::container object
 where container is a string or scalar or vector<container> or tuple<container...>
@@ -27,7 +30,7 @@ Intervals represent a range of scalar or string values.
 Intervals are represented by their boundaries.
 Boundary points are not scalar or string values, but fall between values
 (thus there is no need to distinguish whether an interval between boundaries includes or excludes its end points)
-(at the risl of fanning a religious war, I note that (to me) a major reason that the emacs editing model
+(at the risl of fanning religious wars, I note that (to me) a major reason that the emacs editing model
 seems sp much cleaner than the vi editing model is that the cursor lives between characters, not on characters.
 Similarly, having boundaries between values not at values eliminates legions of special cases for how intervals could interact.
 Perhaps for emacs users who get exasperated by the vi editing model, this comparison might enlighten their understanding of our boundaries.
@@ -75,7 +78,7 @@ todo: class ranges:public std::variant<interval,std::vector<ranges>>{}
       so maybe we just need a notation for binding varibles to container elements
       
 nodes are internal implementation details not normally visible to the c++ user
-the interface to the user looks more like a map with a generalized index
+the interface to the user looks more like a map with a generalized key
 e.g. the equivalent of
   INSERT INTO table_name VALUES 'Column 1', 'Column 2', 'string value', 'then some numbers', 1, 2, 3.14159, 'then another string';
 might be
@@ -89,7 +92,7 @@ or
   map[{"table_name"_s,"Column 1"_s, "Column 2"_s, "string value"_s, "then some numbers"_s, 1, 2, 3.14159, "then another string"_s}] = {};
 the value could be deleted with
   map[{"table_name"_s,"Column 1"_s, "Column 2"_s, "string value"_s, "then some numbers"_s, 1, 2, 3.14159, "then another string"_s}] = nullptr;
-the index could also be an arbitrary predicate, so
+the key could also be an arbitrary predicate, so
   SELECT * FROM table_name WHERE 'then' <= column(4) and column(5) + column(6) < column(7);
 might be written as
   for( auto row:map[{"table_name"_s}][ "then"_s <= 4_column && 5_column + 6_column < 7_column ] ){
@@ -178,9 +181,10 @@ to whom the way I twist the standard concepts may be confusing.
 
 Chris had also develped an explaination of boundaries in terms of infinitesimals,
 which he may want to reproduce for us here
-(and maybe I should also define a constexpr qtl::epsilon  \U03B5 /* ε */, and overload 
-boundary operator+(const &scalar,const &epsilon)
-boundary operator-(const &scalar,const &epsilon)
+(and maybe I should also define a constexpr qtl::epsilon \U03B5 /* ε */, and overload 
+template<typename S>
+boundary<S> operator+(const &S,const &epsilon)
+boundary<S> operator-(const &S,const &epsilon)
 for constructing boundaries)
 
 Since different ways of representing boundaries or intervals may seem more or less intuitive or systematic
