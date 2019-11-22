@@ -300,7 +300,13 @@ from which I leared that it had been previously invented a decade earlier.
 # compile and run demo
 ```
 
-[see also](doc)
+#### [see also](doc)
+
+#### history
+
+<https://github.com/questrel/dtree/pulls?utf8=%E2%9C%93&q=is%3Apr+sort%3Ainteractions+>
+
+
 
 ## Installation Instructions
 
