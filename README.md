@@ -189,8 +189,8 @@ using qtl::expr=optree<interval,vector<interval>>;
 op(+) op(-) op(*) op(/) op(<) op(<=) op (==) op(!=) op(>=) op(>) op(&&) op(||) ...
 #undef op
 qtl::expr e;
-interval i = e.eval(); // evaluate expression 
-interval i = e.bind(std::map<string,expr>).eval(); // evaluate with named variables bound to values
+interval i = e.eval(std::vector<interval>); // evaluate expression with column() values filled in by vector
+interval i = e.bind(std::map<string,expr>).eval(std::vector<interval>); // evaluate with named variables bound to values
 std::string s = e.stringify();  // human readable expression
                                 // todo: e.stringify({pretty print options});
 auto result = e.recurse<function>(Args); // descend tree, recursively performing function on each branch
