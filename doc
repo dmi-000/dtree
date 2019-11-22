@@ -178,7 +178,7 @@ to whom the way I twist the standard concepts may be confusing.
 
 Chris had also develped an explaination of boundaries in terms of infinitesimals,
 which he may want to reproduce for us here
-(and maybe I should also define a constexpr qtl::epsilon \U2C89, and overload 
+(and maybe I should also define a constexpr qtl::epsilon  \U03B5 /* ε */, and overload 
 boundary operator+(const &scalar,const &epsilon)
 boundary operator-(const &scalar,const &epsilon)
 for constructing boundaries)
