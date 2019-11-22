@@ -30,7 +30,7 @@ Intervals represent a range of scalar or string values.
 Intervals are represented by their boundaries.
 Boundary points are not scalar or string values, but fall between values
 (thus there is no need to distinguish whether an interval between boundaries includes or excludes its end points)
-(at the risl of fanning religious wars, I note that (to me) a major reason that the emacs editing model
+(at the risk of fanning religious wars, I note that (to me) a major reason that the emacs editing model
 seems sp much cleaner than the vi editing model is that the cursor lives between characters, not on characters.
 Similarly, having boundaries between values not at values eliminates legions of special cases for how intervals could interact.
 Perhaps for emacs users who get exasperated by the vi editing model, this comparison might enlighten their understanding of our boundaries.
