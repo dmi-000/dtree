@@ -36,11 +36,11 @@ qtl::vector<T>::depth = T::depth-1; // note going down in depth gets more negati
 qtl::tuple<T...>::depth = std::min<T::depth...>-1;
 iterator<depth> // iterates over depth level elements
 ```
-~~~
-Erin, why is there an orange bar under here?
-Oh, I see, it's a scroll bar.  I thought it was like a <hr> separator.
-Would best practice be to keep lines short enough to not scroll?
-~~~
+~~#if 0\
+Erin, why is there an orange bar under here?\
+Oh, I see, it's a scroll bar.  I thought it was like a \<hr\> separator.\
+Would best practice be to keep lines short enough to not scroll?\
+#endif~~
 
 ### qtl/number.h
 ```c++
