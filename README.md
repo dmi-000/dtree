@@ -7,7 +7,7 @@ depends on boost::spirit::X3 and boost::multiprecision::cpp_dec_float (if you wa
 This may reduce portability of our output formats, though it has been tested under clang and g++)\
 ~~todo: get g++ compilations working again (which started failing for other unknown reasons)~~
 
-#### qtl/out.h
+### qtl/out.h
 ```c++
 //templates to print std::container<printable elements>
 
@@ -17,7 +17,7 @@ qtl::ostream& operator<<(const object&); // invokes std::stream << object or obj
 // todo: smart formating of nested containers
 ```
 
-#### qtl/string.h
+### qtl/string.h
 ```c++
 class qtl::string; // like std::string_view, can contain any std::string, maintaining memcmp ordering
 // can also contain out of band separator tokens
@@ -25,7 +25,7 @@ class qtl::string; // like std::string_view, can contain any std::string, mainta
 // there is also a qtl::string value that compares greater than a qtl::string value containing any std::string
 ```
 
-#### qtl/container.h
+### qtl/container.h
 ```c++
 
 template<typename T> class qtl::vector<T>;
@@ -35,32 +35,31 @@ qtl::scalar::depth = 0;
 qtl::vector<T>::depth = T::depth-1; // note going down in depth gets more negative
 qtl::tuple<T...>::depth = std::min<T::depth...>-1;
 iterator<depth> // iterates over depth level elements
-#if 0
-// Erin, why is there an orange bar under here?
+```
+~~ Erin, why is there an orange bar under here?
 Oh, I see, it's a scroll bar.  I thought it was like a <hr> separator.
 Would best practice be to keep lines short enough to not scroll?
-#endif
-```
+~~`
 
-#### qtl/number.h
+### qtl/number.h
 ```c++
 
 class qtl::number; // contains values from std::is_arithmetic type or decfloat, stored in qtl::string with memcmp ordering
 // curently supports E−6176 to E+6144 range of IEEE decimal128, but is extensible with additional table entries
 // todo: explicitly define unlimited extension schema
-// supports IEEE ±infinity, (although we have our own projective infinity (vide infra) that is not signeed,
+// supports IEEE ±infinity, (although we have our own projective infinity [vide infra](#qtlboundsh) that is not signeed,
 // so IEEE ±infinity are treated more like overflow values than a proper infinity)
 // does not support -0 (0 is unique, although we can have underflow values distinct from a proper 0)
 // todo: figure out library paths to get <charconv> working on my development system 
 ```
 
-#### qtl/bool.h
+### qtl/bool.h
 <!-- language: c++ --> 
 ```class qtl::kleen/*e*/; // True/False/Maybe logic``` [en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics](https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics)\
 ```//"e" is dropped from (Stephen) Kleene, as "e" is dropped from (George) Boole```\
 @emckean, is there a way to have both c++ syntax highlighting and links on the same line?
 
-#### qtl/bounds.h
+### qtl/bounds.h
 ```c++
 template<typename T> class qtl::bounds<T>; // T is a scalar type suporting <=>, can be number or string
 constexpr T value;
@@ -79,7 +78,7 @@ value++ or (value|x::x) // boundary above value. i.e. between (x::x<=value) and 
 // of all possible string values, leaving room to interpret a boundary lower than it as ∞)
 ```
 
-#### qtl/interval.h
+### qtl/interval.h
 ```c++
 class qtl::interval; // interval arithmetic, with trinary logic comparisons
 // intervals may contain the projective infinity <https://en.wikipedia.org/wiki/Division_by_zero#Projectively_extended_real_line>
@@ -137,10 +136,10 @@ class qtl::interval; // interval arithmetic, with trinary logic comparisons
 // ~(x==0) was the same as (x!=0), and !(x::x==0) was the same as (x::x!=0)
 // but ~(x::x==0) was the same as ~(x::x!=0), and ~(x==0) was different from ~(x!=0)
 
-// (x==0) is an expression (vide infra),
-// where x is a variable with a value that could be an interval,
+// (x::x==0) is an interval containing the single point 0,
+// whereas (x::x==0) is an  expression [vide infra](#qtltreeh),
 // which would evaluate to an interval representation of a kleen
-// whereas (x::x==0) is an interval
+// that expresses what we can determine about the possibility of x being 0
 
 // (∞<x::x<∞) could also be described as a completely unknown value, so it could be
 // semantically confusing that Unknown is also True.
@@ -149,8 +148,7 @@ class qtl::interval; // interval arithmetic, with trinary logic comparisons
 // note: a union of intervals, or an intersection with an interval that contains the projective infinity
 // (I haven't found or settled on a standard terminology for such intervals.
 // internally, I have the test is_bipole(), but a term more intuitive to others may be
-// useful when trying to document nuances like these) 
-// could result in two disjoint intervals.
+// useful when trying to document nuances like these) could result in two disjoint intervals.
 // I didn't want to generalize the qtl::interval concept to encompass multiple disjoint intervals,
 // since that could entail combinatorial explosions as you perform operations on them.
 // Also, expressions like sin(a) < 0 could represent an infinite number of disjoint intervals.
@@ -179,11 +177,11 @@ class qtl::interval; // interval arithmetic, with trinary logic comparisons
 // it may be more useful if synonyms could be divided by sense)
 ```
 
-#### qtl/tree.h
+### qtl/tree.h
 ```c++
 // generic expression trees with branches of 
 qtl::optree(Operator,vector<Operands>);
-with branches of
+
 using qtl::expr=optree<interval,vector<interval>>;
 #define op(O) qtl::expr operator O(const qtl::expr& left, const qtl::expr& right);
 op(+) op(-) op(*) op(/) op(<) op(<=) op (==) op(!=) op(>=) op(>) op(&&) op(||) ...
@@ -201,19 +199,21 @@ auto result = e.recurse<function>(Args); // descend tree, recursively performing
 // todo???: can store.h be defined as an instantiation of optree?  store.recurse<find>(predicate)? 
 ```
 
-#### qtl/operators.h
+### qtl/operators.h
 ```c++
 // table of operators and precedence hierarchy used by tree.h 
 ```
 
-#### qtl/expr.h
+### qtl/expr.h
 ```c++
 // parse string into an expression tree
 qtl::expr result;
-auto p=boost:spirit::x3::phrase_parse( string.begin(),string.end(), qtl::expr_rule, boost::spirit::x3::ascii::space_type, result ); // should invert result.stringify()
+auto p=boost:spirit::x3::phrase_parse( string.begin(),string.end(), qtl::expr_rule, boost::spirit::x3::ascii::space
+_type, result ); // should invert result.stringify()
 // <http://charette.no-ip.com:81/programming/doxygen/boost/namespaceboost_1_1spirit_1_1x3.html#a7872ffa13c602499eb94ae6d611f738a>
 // todo: expr operator""_expr(const char *c,std::size_t s);
 // todo: expr(char*);
+// todo: generate parse rules from operators.h
 ```
 
 ### qtl/store.h
@@ -231,7 +231,7 @@ for( auto x::lvalue ){ qtl::cout << x; } // print values satisfying query
   also makes lvalue = vector<value> and lvalue = vector<vector<value>> more useful
   possible implementation:
   extend lval operator[](std::vector<scalar>) // query on prefix
-  to lval operator[](std::vector<interval>) // where the False or Empty interval, means to ignore that column
+  to lval operator[](std::vector<interval>) // where the False or Empty interval means to ignore that column
   or use std::ignore?
 */
 ```
@@ -298,6 +298,7 @@ from which I leared that it had been previously invented a decade earlier.
 ### test.bash
 ```bash
 # compile and run demo
+# please leave a question if there's something you don't understand so we can cover it in the documentation
 ```
 
 #### [see also](doc)
