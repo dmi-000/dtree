@@ -9,6 +9,9 @@
 #include <boost/spirit/home/x3.hpp>
 #include <boost/spirit/home/x3/binary/binary.hpp>
 #include <boost/spirit/home/x3/directive/repeat.hpp>
+#include <memory> // for std::shared_ptr
+#include "radix_map.h" // for questrel::radix_map                                                                                                    
+
 //#include <cstdlib> // div
 //#include  <experimental/ranges/iterator>
 //#include <charconv>
@@ -242,6 +245,13 @@ class eof{
   //  operator std::string_view(){ return sv; }
 };// end class eof;
 
+#if 0
+typedef std::basic_string<char, std::char_traits<char>, questrel::shared_memory_allocator<char>> shared_string;
+shared_string operator=(shared_string &l,const std::string &r){
+  shared_string *p = new (shared_memory_allocator<Map>::rebind<shared_string>::other(a).allocate(1, (shared_string*) 0)) shared_string(a);
+  *p = r.c_str();
+}
+#endif
 class string/*:public std::string*/ {
 public:
   typedef std::string_view base_t;
@@ -261,7 +271,7 @@ public:
 
   //  using base_t::base_t;
 
-  mutable std::optional<std_t> _opt;
+  mutable std::optional<std::string> _opt;
   mutable base_t _this;
   static int plength(std::string &s){
     int ret=s.size();

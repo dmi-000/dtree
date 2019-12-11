@@ -887,33 +887,47 @@ template<typename R>
     }
   }; // end class path
 
-  using expr=path::expr;
-  using optexpr=path::optexpr;
-  friend row /*std::vector<lex::string>*/ operator+(const row /*std::vector<lex::string>*/ &v, const path &p){
-#ifndef NOELIDECOLUMN
-    NOTRACE(std::cerr << __PRETTY_FUNCTION__ << "(" << v << ", " << p << ')' << '\n'; )
-    row /*std::vector<lex::string>*/ ret;
-    ret.reserve(std::max(p.size(), v.size()));
-    auto j = v.begin();
-    for(auto i : p){
-      if(i.is_point()){
-	NOTRACE(std::cerr << i << ": " << ret << '\n' );
-        ret.push_back(i.l().value().raw());
-      } else if(j != v.end()){
-        ret.push_back(*(j++));
-      } else {
-        ret.push_back(nullptr);
-      }
-    }
-    for(; j != v.end(); ++j){
-      ret.push_back(*j);
-    }
-    return ret;
-#else
-    return v;
-#endif
-  };
+  typedef std::basic_string<char, std::char_traits<char>, questrel::shared_memory_allocator<char>> shared_string;
 
+class key_less {
+public:
+  bool operator()(std::string const &x, std::string const &y) const { return questrel::character_set_t(questrel::dictorder).key_less(x.c_str(), y.c_str()); }
+  bool operator()(std::shared_ptr<shared_string> const &x, std::shared_ptr<shared_string> const &y) const { return questrel::character_set_t(questrel::dictorder).key_less(x.get()->c_str(), y.get()->c_str()); }
+};
+
+
+  typedef std::map < std::shared_ptr<shared_string>, std::shared_ptr<shared_string>, key_less,
+    questrel::shared_memory_allocator<std::map<std::shared_ptr<shared_string>, std::shared_ptr<shared_string>>::value_type> > Map;
+  #define BASE_T std::shared_ptr<shared_string>
+  class path_key: public BASE_T{
+    using base_t=BASE_T;
+    #undef BASE_T
+    std::string get_file_name(const std::string & file_name, const char *suffix) {
+      std::string::size_type i = file_name.find_last_of('/');
+      i = (i == std::string::npos) ? 0 : (i + 1);
+  std::string::size_type j = file_name.find_last_of('.');
+  j = (j == std::string::npos) ? (file_name.length() - i) : (j - i);
+  return file_name.substr(i, j) + suffix;
+    }
+
+
+template <typename T>
+struct deleter_t { void operator()(T *p) { delete p; } };
+
+  public:
+
+    using base_t::base_t;
+    Map *m;    
+    path_key operator=(const path &path){
+     lex::string ls=path;
+     const char* file_name="store.test";
+     std::string map_file_name(get_file_name(file_name, ".map"));
+     const char *map_file_name_c_str = map_file_name.c_str();
+     int file_exists = access(map_file_name_c_str, F_OK);
+     questrel::shared_memory_allocator<Map> a(map_file_name_c_str);
+
+    }
+  }; // end class path_key;
   friend /*std::vector<lex::string>*/ row operator%(const row /*std::vector<lex::string>*/ &v, const path &p){
 #ifndef NOELIDECOLUMN
     row /*std::vector<lex::string>*/ ret;
@@ -1455,7 +1469,32 @@ template<typename R>
     }; // end class section::iterator
   }; // end class section
 
+
+typedef size_t pos_type;
+#if 0
+typedef std::basic_string<char, std::char_traits<char>, questrel::shared_memory_allocator<char>> shared_string;
+class key_less {
+public:
+  bool operator()(std::string const &x, std::string const &y) const { return questrel::character_set_t(questrel::dictorder).key_less(x.c_str(), y.c_str()); }
+  bool operator()(std::shared_ptr<shared_string> const &x, std::shared_ptr<shared_string> const &y) const { return questrel::character_set_t(questrel::dictorder).key_less(x.get()->c_str( \
+), y.get()->c_str()); }
+};
+
+ typedef std::multimap < std::shared_ptr<shared_string>, pos_type, key_less,
+   questrel::shared_memory_allocator<std::multimap<std::shared_ptr<shared_string>, pos_type>::value_type> > Map;
+#endif
+ /*
+ template<typename Key,typename Val>
+  typedef std::multimap < std::shared_ptr<Key>, Val, key_less,
+   questrel::shared_memory_allocator<std::multimap<std::shared_ptr<Key>, Val>::value_type> > MMap;
+ */
+typedef Map::iterator Miter;
+ 
+#if 0
 #define BASE_T std::map<path, std::shared_ptr<vertex>,path::lexicographical_less,questrel::shared_memory_allocator<std::map<path,std::shared_ptr<vertex>>::value_type>>
+#else
+#define BASE_T std::map<std::shared_ptr<shared_string>, std::shared_ptr<vertex>,path::lexicographical_less,questrel::shared_memory_allocator<std::map<std::shared_ptr<shared_string>,std::shared_ptr<vertex>>::value_type>>
+#endif
   class lattice : public BASE_T {
     using base_t = BASE_T;
 #undef BASE_T
