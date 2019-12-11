@@ -19,6 +19,7 @@
 #include <stdexcept> // for std::runtime_error
 #include <string> // for std::string
 #include <sys/mman.h> // for mmap(), off_t
+#include <typeinfo>
 
 // for fcntl() on Linux prior to 3.15 and non-Linux systems prior to POSIX.1
 #ifndef F_OFD_SETLKW
@@ -39,7 +40,6 @@
 
 namespace questrel
 {
-
   /**
    *  @brief  This is a power of 2 allocator which will maintain one global freelist
    *  for all processes in a memory mapped file.
@@ -131,7 +131,7 @@ private:
 	  {
 	    throw_error("invalid file size");
 	  }
-	  void* __v = mmap(0, __header_length, PROT_WRITE, MAP_SHARED, __file_descriptor, 0);
+	  void* __v = mmap(0, __header_length, PROT_READ | PROT_WRITE, MAP_SHARED, __file_descriptor, 0);
 	  if (__v == MAP_FAILED)
 	  {
 	    throw_error("mmap");
@@ -145,8 +145,8 @@ private:
 	  if (__header->__free_list[__index].__base)
 	  {
 	    size_type __size = 1 << __index;
-	    void* __v = mmap(__header->__free_list[__index].__base, __size, PROT_WRITE, MAP_SHARED, __file_descriptor, __offset);
-	    if (__v == MAP_FAILED)
+		void* __v = mmap(__header->__free_list[__index].__base, __size, PROT_READ | PROT_WRITE, MAP_SHARED, __file_descriptor, __offset);
+		if (__v == MAP_FAILED)
 	    {
 	      throw_error("mmap");
 	    }
@@ -168,7 +168,7 @@ public:
 	fl.l_start = 0;
 	fl.l_len = 0;
 	fl.l_pid = 0;
-	if (fcntl(__file_descriptor, F_OFD_SETLKW, &fl) == -1) {
+	if (fcntl(__file_descriptor, F_SETLKW, &fl) == -1) {
 	  throw_error("fcntl");
 	}
       }
@@ -183,7 +183,7 @@ public:
 	fl.l_start = 0;
 	fl.l_len = 0;
 	fl.l_pid = 0;
-	if (fcntl(__file_descriptor, F_OFD_SETLKW, &fl) == -1) {
+	if (fcntl(__file_descriptor, F_SETLKW, &fl) == -1) {
 	  throw_error("fcntl");
 	}
       }
@@ -198,7 +198,7 @@ public:
 	fl.l_start = 0;
 	fl.l_len = 0;
 	fl.l_pid = 0;
-	if (fcntl(__file_descriptor, F_OFD_SETLKW, &fl) == -1) {
+	if (fcntl(__file_descriptor, F_SETLKW, &fl) == -1) {
 	  throw_error("fcntl");
 	}
       }
@@ -235,7 +235,7 @@ private:
 	{
 	  throw_error("ftruncate");
 	}
-	void *__v =  mmap(0, __bytes, PROT_WRITE, MAP_SHARED, __file_descriptor, __offset);
+	void *__v =  mmap(0, __bytes, PROT_WRITE | PROT_WRITE, MAP_SHARED, __file_descriptor, __offset);
 	if (__v == MAP_FAILED)
 	{
 	  throw_error("mmap");
@@ -257,6 +257,8 @@ private:
 
 public:
 
+	  shared_memory_allocator() { }
+
       shared_memory_allocator(const char* __file_name) { init(__file_name); }
 
       template<typename _Tp1>
@@ -267,13 +269,25 @@ public:
 	}
 
       ~shared_memory_allocator() { }
-
+	
+	template<typename _Tp2>
+	struct rebind
+    {
+        typedef shared_memory_allocator<_Tp2> other;
+    };
+	
       pointer
 	allocate(size_type __n, const void* = 0);
 
       void
 	deallocate(pointer __p, size_type __n);
       
+	  _header*
+	get_header()
+      {
+	return __header;
+      }
+	  
       pointer
 	get_root()
       {
@@ -293,8 +307,11 @@ public:
     allocate(size_type __n, const void*)
     {
 
-      size_type __bytes = __n * sizeof(_Tp);
-      size_type __log_2_size = ceiling_log_2(__bytes);
+	  if (__n <= 0) {
+		  __n = 1;
+	  }
+	  size_type __bytes = __n * sizeof(_Tp);
+	  size_type __log_2_size = ceiling_log_2(__bytes);
       size_type __index = __log_2_size;
       lock_for_write();
       _block* __retval = __header->__free_list[__index].__first; // block to return (if any)
@@ -304,14 +321,14 @@ public:
       }
       else
       {
-	while (!__header->__free_list[++__index].__first) // loop while free list is empty
+	while (!__header->__free_list[__index].__first) // loop while free list is empty
 	{ 
 	  if (__index >= ceiling_log_2(minimum_shared_memory_block_size())) // if index is above minumum size
 	  {
 	    if (!__header->__free_list[__index].__base) // if block is not allocated
 	    {
 	      __header->__free_list[__index].__base = allocate_shared_memory_block(1 << __index); // allocate block
-	      __header->__free_list[__index].__first = __header->__free_list[__index].__base; // chain block to (empty) free list
+		  __header->__free_list[__index].__first = __header->__free_list[__index].__base; // chain block to (empty) free list
 	      if (__header->__free_list[__index].__first->__next)
 	      {
 		throw_error("mmap is not zeroed at start");
@@ -319,6 +336,7 @@ public:
 	      break; // free list is not empty
 	    }
 	  }
+	  ++__index;
 	}
 	__retval = __header->__free_list[__index].__first; // block to return after it is subdivided
 	__header->__free_list[__index].__first = __retval->__next; // unchain block to return from free list
@@ -327,7 +345,7 @@ public:
 	{
 	  if (__header->__free_list[__index].__first) // NB. all lower power of 2 free lists are empty
 	  {
-	    throw_error("lower free list is not empty");
+		throw_error("lower free list is not empty");
 	  }
 	  // chain remainder of return block with length appropriate for this free list entry
 	  __header->__free_list[__index].__first = reinterpret_cast<_block*>(reinterpret_cast<char*>(__retval) + (1 << __index));
@@ -338,7 +356,7 @@ public:
 	}
       }
       unlock();
-      return reinterpret_cast<_Tp*>(__retval);
+	  return reinterpret_cast<_Tp*>(__retval);
     }
   
   template<typename _Tp>

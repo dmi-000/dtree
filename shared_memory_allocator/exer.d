@@ -1,3 +1,2 @@
-exer: exer.cpp ../common/ioerror.h ../shared_memory_allocator/radix_map.h \
-  ../shared_memory_allocator/iocommon.h \
-  ../shared_memory_allocator/shared_memory_allocator.h
+exer.string: exer.string.cpp ioerror.h radix_map.h iocommon.h ioerror.h \
+ shared_memory_allocator.h

@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <climits>
 #include <fstream>
 #include "ioerror.h" // for Throw
 #include <iostream>
@@ -19,13 +20,16 @@ typedef radix_map < pos_type > Radix_map;
 typedef Radix_map::iterator Xiter;
 typedef pair < Xiter, Xiter > Xpair;
 
+typedef std::basic_string<char, std::char_traits<char>, shared_memory_allocator<char>> shared_string;
+
 class key_less {
 public:
   bool operator()(string const &x, string const &y) const { return character_set_t(dictorder).key_less(x.c_str(), y.c_str()); }
-  bool operator()(shared_ptr<string> const &x, shared_ptr<string> const &y) const { return character_set_t(dictorder).key_less(x->c_str(), y->c_str()); }
+  bool operator()(shared_ptr<shared_string> const &x, shared_ptr<shared_string> const &y) const { return character_set_t(dictorder).key_less(x.get()->c_str(), y.get()->c_str()); }
 };
 
-typedef multimap < shared_ptr<string>, pos_type, key_less, shared_memory_allocator</*shared_ptr<string>*/ multimap<shared_ptr<string>, pos_type>::value_type> > Map;
+typedef multimap < shared_ptr<shared_string>, pos_type, key_less,
+	shared_memory_allocator<multimap<shared_ptr<shared_string>, pos_type>::value_type> > Map;
 typedef Map::iterator Miter;
 
 typedef vector<Map::key_type> Vector;
@@ -235,15 +239,13 @@ void run(char cmd, const char *arg, istream &in = cin) {
       Miter im;
       string map_file_name(get_file_name(file_name, ".map"));
       const char *map_file_name_c_str = map_file_name.c_str();
-      if (access(map_file_name_c_str, F_OK) == 0) { // file already exists
-	shared_memory_allocator<Map> a(map_file_name_c_str);
+	  int file_exists = access(map_file_name_c_str, F_OK);
+	  shared_memory_allocator<Map> a(map_file_name_c_str);
+      if (file_exists == 0) { // file already exists
 	m = a.get_root();
+	im = m->begin();
       } else { // file does not exist
-	shared_memory_allocator<Map> a(map_file_name_c_str);
-	shared_memory_allocator<shared_ptr<string>> ap(map_file_name_c_str);
-	shared_memory_allocator<string> as(map_file_name_c_str);
-	shared_memory_allocator<char> ac(map_file_name_c_str);
-	deleter_t<string> d;
+	deleter_t<shared_string> d;
 	Map *root = reinterpret_cast<Map*>(a.allocate(sizeof(Map)));
 	a.set_root(root);
 	m = new (root) Map(a);
@@ -251,16 +253,19 @@ void run(char cmd, const char *arg, istream &in = cin) {
 	string line;
 	im = m->begin();
 	for (pos_type pos; (pos = fin.tellg()), getline(fin, line); ) {
-	  string *p = new (as.allocate(sizeof(string))) string(ac);
-	  *p = line;
-	  im = m->insert(im, make_pair(shared_ptr<string>(p, d, ap), pos));
+	  shared_string *p = new (shared_memory_allocator<Map>::rebind<shared_string>::other(a).allocate(1, (shared_string*) 0)) shared_string(a);
+	  *p = line.c_str();
+	  im = m->insert(im, make_pair(shared_ptr<shared_string>(p, d, a), pos));
 	}
-      }
+
+	}
       d = milliseconds(clock() - start);
-      cout << "std::map: loaded " << m->size() << " in " << d << " milliseconds" << endl;
+	  cout << "std::map: loaded " << m->size() << " in " << d << " milliseconds" << endl;
       start = clock();
-      for (im = m->begin(); im != m->end(); ++im);
-      d = milliseconds(clock() - start);
+	  for (im = m->begin(); im != m->end(); ++im){
+		  //fprintf(stdout, "%s\n", im->first.get()->c_str());
+	  }
+	  d = milliseconds(clock() - start);
       cout << "std::map: traverse " << m->size() << " in " << d << " milliseconds" << endl;
       /*
       Radix_map x(get_file_name(file_name, ".rad").c_str(), read_only);
@@ -286,13 +291,14 @@ void run(char cmd, const char *arg, istream &in = cin) {
           exit(-1);
         }
 	*/
-        if ((rand() & 63) == 0)
-          v.push_back(im->first);
+        if ((rand() & 63) == 0) {
+			v.push_back(im->first);
+		}
       }
       int n = 0;
       start = clock();
       for (Viter i = v.begin(); i != v.end(); ++i) {
-        int c = m->count(*i);
+		int c = m->count(*i);
         if (c)
           n += c;
         else {
