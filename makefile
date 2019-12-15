@@ -1,7 +1,5 @@
-bCXX=g++
+CXX=g++
 CXX=clang++ 
-clang++_flags=-isystem /usr/local/Cellar/llvm/9.0.0_1/include/c++/v1
-g++_flags=
 CXXFLAGS= -v -Xlinker -fno-omit-frame-pointer -fno-optimize-sibling-calls  -I  /usr/local/opt/boost/include/
 
 #CXXFLAGS += -fsave-optimization-record -fprofile-instr-generate -fcoverage-mapping -ftest-coverage -fprofile-arcs
