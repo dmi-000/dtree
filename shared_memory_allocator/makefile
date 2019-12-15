@@ -5,9 +5,9 @@ clang++_flags = -isystem /usr/local/Cellar/llvm/9.0.0_1/include/c++/v1
 g++_flags =
 CXXFLAGS = $($(firstword $(CC))_flags) -v -I . -I util -DTEST_T1 -pthread $(CPPFLAGS)
 
-nWORDS = /usr/share/dict/words
+WORDS = /usr/share/dict/words
 CANON = /usr/local/lib/wordlist/canon
-GnnnOOCH = /usr/local/lib/wordlist/gooch/bigdatt77.txt
+GOOCH = /usr/local/lib/wordlist/gooch/bigdatt77.txt
 WORDS_DB = /usr/local/lib/wordlist/words.db
 
 exer: exer.cpp
