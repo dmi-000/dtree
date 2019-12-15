@@ -1,14 +1,17 @@
-CXX=g++
+bCXX=g++
 CXX=clang++ 
+clang++_flags=-isystem /usr/local/Cellar/llvm/9.0.0_1/include/c++/v1
+g++_flags=
+CXXFLAGS= -v -Xlinker -fno-omit-frame-pointer -fno-optimize-sibling-calls  -I  /usr/local/opt/boost/include/
 
-CXXFLAGS= -v -Xlinker -L/usr/local/opt/llvm/lib -fno-omit-frame-pointer -fno-optimize-sibling-calls -I ~/boost_1_70_0 
 #CXXFLAGS += -fsave-optimization-record -fprofile-instr-generate -fcoverage-mapping -ftest-coverage -fprofile-arcs
 # -fsanitize-memory-track-origins 
 # -fno-sanitize-address-use-after-scope
 g++_includepath=/usr/local/include/c++/8.0.0:/usr/local/opt
 g++-8_includepath=$(CPLUS_INCLUDE_PATH)
-clang++_includepath:=$(CPLUS_INCLUDE_PATH)
-clang++_flags= -glldb --std=c++2a -fdebug-macro -fstandalone-debug -fsave-optimization-record -fprofile-instr-generate -fcoverage-mapping -fdiagnostics-show-template-tree
+clang++_includepath:=$(CPLUS_INCLUDE_PATH) 
+# clang++_flags= -glldb --std=c++2a -fdebug-macro -fstandalone-debug -fsave-optimization-record -fprofile-instr-generate -fcoverage-mapping -fdiagnostics-show-template-tree -L/usr/local/opt/llvm/lib -I/usr/local/opt/llvm/include -I /Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include -isystem /Library/Developer/CommandLineTools/usr/include/c++/v1 # -isystem /usr/local/Cellar/llvm/9.0.0_1/include/c++/v1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk
+clang++_flags= -glldb --std=c++2a -fdebug-macro -fstandalone-debug -fsave-optimization-record -fprofile-instr-generate -fcoverage-mapping -fdiagnostics-show-template-tree -isystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1/ -L/usr/local/opt/llvm/lib -isystem /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -isystem /Library/Developer/CommandLineTools/usr/include/c++/v1 -isystem /usr/local/Cellar/llvm/9.0.0_1/include/c++/v1
 g++_flags=--std=c++17
 g++-8_flags=--std=c++17
 CXXFLAGS+=$($(firstword $(CXX))_flags) -I ~/boost_1_70_0
@@ -43,7 +46,7 @@ SPLIT=perl -pe 'BEGIN{$$a="aa"}open STDOUT,">$$ARGV[0]".$$a++;END{}' -
 	perl -MList::Util=shuffle -e 'print shuffle <>' $(FDIR)/$(*F).in/* | tee $(*F).test.in | ./$(*F).test.out 2>&1 | tee  $@
 
 all: out.test.out string.test.out container.test.out number.test.out interval.test.out expr.test.out sql.test.out store.test.out
-	
+
 tests: out.test.log string.test.log container.test.log number.test.log interval.test.log expr.test.log sql.test.log store.test.log
 
 interval.test.out: qtl/number.h qtl/container.h
