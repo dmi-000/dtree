@@ -17,6 +17,15 @@
 #include <algorithm>
 #include <variant>
 #include "radix_map.h"
+#if __has_include(<coroutine>)
+# include <coroutine>
+#else
+# include <experimental/coroutine>
+#endif
+//using std::experimental::suspend_always=std::suspend_always;
+#include <cppcoro/recursive_generator.hpp>
+#include <sys/types.h>
+#include <unistd.h>
 #if 0
 template<typename T>
   std::shared_ptr<T>::operator void*()const{
@@ -87,19 +96,19 @@ operator<<(std::ostream &os, const std::set<T> &obj){
 }
 template<typename T>
 #define BASE_T std::vector<T>
-  class sample: public BASE_T{
+class sample: public BASE_T{ // sample O( log^2(n) ) out of n 
    using base_t=BASE_T;
  #undef BASE_T
    int n=0;
-   int lg=0;
+  int lg=0; // log2(count)
    int nl=1;
  public:
    int count=0;
 
    using base_t::base_t;
    void push_back( const T& v){
-     if( ++count >= n ){
-       base_t::push_back(v);
+     if( ++count >= n ){ // ∫ lg(x)/x dx ∝ lg^2(x)
+       base_t::push_back(v); // v.size() = O(lg^2(count))
        if( lg ){ n += count/lg; }
      }
      if( count > nl ){
@@ -114,7 +123,7 @@ template<typename T>
      lg=0;
      nl=1;
    }
-  inline auto& write(std::ostream &os=std::cerr)const{
+  inline auto& write(std::ostream &os=std::cout)const{
     os << "{";
     os << " count="<< count;
     os << " size()="<< base_t::size();
@@ -247,7 +256,7 @@ range(){}
   auto end() const {
     return r()->end();
   }
- inline auto& write(std::ostream &os=std::cerr)const{
+ inline auto& write(std::ostream &os=std::cout)const{
    os << "{" << r() << "," ;
    if( !r() || it()==end() ){ os << "end()"; }else{ os << *it(); }
    os << "}";
@@ -399,7 +408,8 @@ public:
     }
     splits(const interval &b, const std::set<boundary_t> &d)
       : base_t(b, d){
-     /**/NOTRACE(std::cerr << __PRETTY_FUNCTION__ << '\n';)
+     /**/TRACE(std::cerr << __PRETTY_FUNCTION__ << '\n';)
+	/**/TRACE(std::cerr << b << ", " << d << '\n';)
     }
 
     class iterator : public std::set<boundary_t>::const_iterator {
@@ -449,16 +459,16 @@ public:
         : base(b)
         , base_t(i)
         , first(f){
-       NOTRACE(std::cerr << __PRETTY_FUNCTION__ << '\n';)
-       /**/NOTRACE(std::cerr << "this=" << this << '\n';)
-       /**/NOTRACE(std::cerr << "b=" << b << '\n';)
+       TRACE(std::cerr << __PRETTY_FUNCTION__ << '\n';)
+       TRACE(std::cerr << "this=" << this << '\n';)
+       TRACE(std::cerr << "b=" << b << '\n';)
       }
       auto operator=(nullptr_t n){
 	first=false;
 	*(base_t *)this=base->div().end();
 	return *this;
       }
-      inline auto& write(std::ostream &os=std::cerr)const{
+      inline auto& write(std::ostream &os=std::cout)const{
         //TRACE(
 	      os << "{" << first << ":*" << base << ":" << *base /* << "->div().begin()+" << *(base_t*)this-base->div().begin() */ ;
 	      if( *(base_t*)this != base->div().end() ){
@@ -474,7 +484,7 @@ public:
     }; // end class splits::iterator;
     using lex_t=parts::lex_t;
     splits( const lex_t &l ){
-       NOTRACE( std::cerr << __PRETTY_FUNCTION__ << "(" << l << ")" << '\n'; )
+       TRACE( std::cerr << __PRETTY_FUNCTION__ << "(" << l << ")" << '\n'; )
 	 if( l._this.data()[0]=='f' ){
 	   auto debughook=1;
          }
@@ -614,8 +624,8 @@ public:
       return pathspec(*this,v);
     }
     path operator+(const std::vector<lex::scalar> &v){
-      NOTRACE(std::cout << __PRETTY_FUNCTION__ << "(" << v << ")" << '\n'; )
-      NOTRACE( this->write(std::cout); std::cout << '\n'; )
+      NOTRACE(std::cerr << __PRETTY_FUNCTION__ << "(" << v << ")" << '\n'; )
+      NOTRACE( this->write(std::cerr); std::cerr << '\n'; )
       path ret = *this;
       ret.reserve(ret.size()+v.size());
       auto j   = v.begin();
@@ -632,7 +642,7 @@ public:
         ret.push_back(*j);
         ++j;
       }
-      NOTRACE( std::cout << ret << ".trim()\n"; )
+      NOTRACE( std::cerr << ret << ".trim()\n"; )
       return ret.trim();
     }
 #if 1
@@ -650,8 +660,8 @@ public:
     friend std::ostream &operator<<(std::ostream &os, const T &obj)
 #  endif
              {
-     NOTRACE(std::cout << __PRETTY_FUNCTION__ << has_mapped_type<T>::value << '\n'; )
-     NOTRACE(std::cout << __PRETTY_FUNCTION__ << is_mappish<T>{} << '\n'; )
+     NOTRACE(std::cerr << __PRETTY_FUNCTION__ << has_mapped_type<T>::value << '\n'; )
+     NOTRACE(std::cerr << __PRETTY_FUNCTION__ << is_mappish<T>{} << '\n'; )
       qtl::ios_base::fmtflags f;
       using namespace qtl::literals;
       os >> f;
@@ -733,7 +743,7 @@ public:
 
 
     kleen satisfies(const std::vector<lex::scalar> &p) const {
-      NOTRACE(std::cerr << __PRETTY_FUNCTION__ << '(' << p << ')' << '\n';)
+      TRACE(std::cerr << __PRETTY_FUNCTION__ << '(' << p << ')' << '\n';)
       auto i   = (*this).begin();
       auto r   = (p).begin();
       auto ret = kleen::T;
@@ -749,6 +759,8 @@ public:
       return ret;
     }
     kleen satisfies(const optexpr &e) const {
+      TRACE(std::cerr << __PRETTY_FUNCTION__ << '(' << e << ')' << '\n';)
+      TRACE(std::cerr << *this << '\n';)
       return e.admits(*this);
     }
 #define BASE_T std::tuple<row , optexpr>
@@ -834,13 +846,13 @@ template<typename R>
       return os;
     }
     kleen satisfies(const requirements &r) const {
-     /**/NOTRACE(std::cerr << __PRETTY_FUNCTION__ << '(' << r << ')' << '\n';)
-	NOTRACE( std::cerr << *this << '\n';)
+     /**/TRACE(std::cerr << __PRETTY_FUNCTION__ << '(' << r << ')' << '\n';)
+	TRACE( std::cerr << *this << '\n';)
 	auto ret = satisfies(r.prefix());
       if(ret == kleen::F){
         return ret;
       }
-      NOTRACE(std::cerr << "=" << ret << "&&" << satisfies(r.expr()) << '\n';)
+      TRACE(std::cerr << "=" << ret << "&&" << satisfies(r.expr()) << '\n';)
 	return ret & satisfies(r.expr());
     }
     operator lex::string() const {
@@ -865,7 +877,7 @@ template<typename R>
       return ret;
     }
     // function 'write' with deduced return type cannot be used before it is defined
-    inline /*auto*/ /**/std::ostream/**/ & write(std::ostream &os=std::cerr)const{
+    inline /*auto*/ /**/std::ostream/**/ & write(std::ostream &os=std::cout)const{
       os << (base_t)*this << '\n'; 
         return os;
     }
@@ -1062,7 +1074,7 @@ template<typename R>
 	it()=nullptr;
 	return *this;
       }
-      inline auto& write(std::ostream &os=std::cerr)const{
+      inline auto& write(std::ostream &os=std::cout)const{
         os << "{ d()="<< d() << "," << "it()=" << it() << "}" << '\n'; 
         return os;
       }
@@ -1094,7 +1106,7 @@ template<typename R>
     auto end() const {
       return nullptr;
     }
-    inline auto& write(std::ostream &os=std::cerr)const{
+    inline auto& write(std::ostream &os=std::cout)const{
       os << base_;
       return os;
     }
@@ -1233,7 +1245,11 @@ template<typename R>
     static inline std::ostream &write(std::ostream &os, const vertex &t, int indent = 0){
       switch(t.index()){
       case 0: {
-        os << std::get<0>(*(base_t *)&t);
+	if( std::get<0>(*(base_t *)&t).size()<10 ){
+          os << std::get<0>(*(base_t *)&t);
+	}else{
+          os << "{" << std::get<0>(*(base_t *)&t).front() << " ... /* " << std::get<0>(*(base_t *)&t).size() << " */ ... " <<  std::get<0>(*(base_t *)&t).back() << "}"; ;
+        }
       };break;
       case 1: {
         os << std::get<1>(*(base_t *)&t);
@@ -1354,7 +1370,7 @@ template<typename R>
       }
       auto end()const{ return nullptr; }
       // iterator operator=(const iterator &i){ return *this=i; } // infinite recursion
-      inline auto& write(std::ostream &os=std::cerr)const{
+      inline auto& write(std::ostream &os=std::cout)const{
 	os << "{" << it().d() << ":" << !it().it().first << ","<< it().it() << "," << !(it().it()!=nullptr)<<  "}";
 	return os;
       }
@@ -1455,7 +1471,8 @@ template<typename R>
     }; // end class section::iterator
   }; // end class section
 
-#define BASE_T std::map<path, std::shared_ptr<vertex>,path::lexicographical_less,questrel::shared_memory_allocator<std::map<path,std::shared_ptr<vertex>>::value_type>>
+  //#define BASE_T std::map<path, std::shared_ptr<vertex>,path::lexicographical_less,questrel::shared_memory_allocator<std::map<path,std::shared_ptr<vertex>>::value_type>>
+#define BASE_T std::map<path, std::shared_ptr<vertex>, path::lexicographical_less>
   class lattice : public BASE_T {
     using base_t = BASE_T;
 #undef BASE_T
@@ -1468,6 +1485,7 @@ template<typename R>
   lattice():lattice((std::string)__BASE_FILE__){}
   lattice(std::string file_name){
      NOTRACE(std::cerr << __PRETTY_FUNCTION__ << '(' << file_name << ")" << '\n';);
+#if 0
     const char *map_file_name_c_str = (file_name + ".map").c_str();
     if (access(map_file_name_c_str, F_OK) == 0) { // file already exists
       questrel::shared_memory_allocator<base_t> a(map_file_name_c_str);
@@ -1491,7 +1509,8 @@ template<typename R>
 	for( auto x:*m ){
 	     std::cerr << '{' << x.first << ", " << x.second  << "}" << '\n';
 	}
-
+#endif
+	m=&root;
   }
 #endif
 
@@ -1631,7 +1650,7 @@ template<typename R>
 	    //	    NOTRACE( std::cerr <<  "_r" << _r << '\n'; )
 	    //	    NOTRACE( std::cerr <<  "_r->req():" << _r->req() << '\n'; )
 	 NOTRACE( std::cerr << "path():" << path() << "\n"; );
-	  confluence[path()] ^= it().r()->vertex()->divs();
+
 	  NOTRACE( std::cerr <<  "confluence[" << path() << "]=" << confluence[path()] << "\n"; )
 {
   //TRACE( std::cerr << "confluence:" <<  confluence << '\n'; )
@@ -1676,12 +1695,12 @@ template<typename R>
 	   }
 #  endif
          void satisfy(){
-         NOTRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; )
+         TRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; )
 	  NOTRACE( std::cerr <<  "r()" << r() << '\n'; )
 	 NOTRACE( std::cerr << "r()->req():" << r()->req() << '\n'; )
-	   NOTRACE( std::cerr << "path():" << path() << '\n'; )
+	   TRACE( std::cerr << "path():" << path() << '\n'; )
 	   while( it()!=it().end() && (path() + *it()).satisfies(r()->req()) == kleen::F ){
-	     NOTRACE( std::cerr << "skip " << *it() << '\n'; )
+	     TRACE( std::cerr << "skip " << *it() << '\n'; )
 	     ++it();
            }
 	   NOTRACE( if( it()!=it().end() ){ std::cerr << "satisfied:" << *it() << "\n"; } )
@@ -1966,25 +1985,25 @@ template<typename R>
 	  path()={};
           return false;
         }
-	TRACE(std::cerr << *this << '\n'; )
+	NOTRACE(std::cerr << *this << '\n'; )
 	NOTRACE( std::cerr << "it:{" << it()  << " <- "; ) 
         base_t::pop_back();
         if( empty() ){
 	  path({});
-	  TRACE( std::cerr << "empty()}\n"; ) 
+	  NOTRACE( std::cerr << "empty()}\n"; ) 
           return false;
         }
-	TRACE( std::cerr << it() << "}\n"; );
+	NOTRACE( std::cerr << it() << "}\n"; );
 	  NOTRACE( std::cerr << "it().it().r():" << it().it().r()  << "\n"; )	  
 	  NOTRACE( std::cerr << "it().it().r()->vertex():" << it().it().r()->vertex()  << "\n"; )	  
 	  NOTRACE( std::cerr << "*it().it().r()->vertex():" << *it().it().r()->vertex()  << "\n"; ) 
 
-	  TRACE( std::cerr << "l:{" << l  << " <- "; ) 
+	  NOTRACE( std::cerr << "l:{" << l  << " <- "; ) 
         l         = it().r()->v();
 	  TRACE( std::cerr << l  << "}" << '\n'; ) 
 
 	  NOTRACE( std::cerr << "*it().it().r()->vertex():" << *it().it().r()->vertex()  << "\n"; ) 
-	  TRACE( std::cerr << "path():" << path() << "\n"; )
+	  NOTRACE( std::cerr << "path():" << path() << "\n"; )
        return true;
       }
       std::optional<leaf::iterator> operator++(){
@@ -1994,10 +2013,10 @@ template<typename R>
 	while( it() == it().end() /*|| is_leaf()*/ ){
 	  NOTRACE(std::cerr << "it():" << it() << " is_leaf():" << is_leaf() << '\n'; )
 	  NOTRACE( std::cerr << "it().it():"  << it().it() << '\n');
-  	  NOTRACE( if( it() == it().end() ){ std::cerr << "end()\n"; }else{ std::cout << *it() << '\n'; } )
+  	  NOTRACE( if( it() == it().end() ){ std::cerr << "end()\n"; }else{ std::cerr << *it() << '\n'; } )
           pop_back();
 	  NOTRACE( if( !empty() ){ std::cerr << "it():"  << it() << '\n'; }else{  std::cerr << "it(): empty()" << "\n"; } )
-	  NOTRACE( if( empty() || it() == it().end() ){ std::cerr << "end()\n"; }else{ std::cout << *it() << '\n'; } )
+	  NOTRACE( if( empty() || it() == it().end() ){ std::cerr << "end()\n"; }else{ std::cerr << *it() << '\n'; } )
 	  if( empty() ){ return {}; }
 
        }
@@ -2037,7 +2056,7 @@ template<typename R>
       inline auto& write(std::ostream &os=std::cout )const{
 
 	os << "path=" << path() << '\n';
-        os << "ptr<vertex>-" << l << '\n';;
+        TRACE( os << "ptr<vertex>:" << l << '\n'; )
 	if( l ){ os << "*vertex=" << *l << '\n'; }
 	if( is_leaf() ){
 	  os << "leaf::iterator=" << leaf_it() << '\n';
@@ -2123,11 +2142,11 @@ template<typename R>
         assert(stack().l);
 
         while(!stack().is_leaf()){
-          TRACE( std::cerr << __LINE__ << " r:" <<r );
-	  TRACE( std::cerr << "*root[" << path() << "]:" << *root[path()] << "\n"; ) // 7291. 7359
-	  TRACE( std::cerr << "stack().path()" << stack().path() << "\n"; )
-	  TRACE( std::cerr << "*stack().l" << *stack().l << "\n"; )
-          TRACE( std::cerr << kve::iterator(path(), r) << '\n'; )
+          NOTRACE( std::cerr << __LINE__ << " r:" <<r );
+	  NOTRACE( std::cerr << "*root[" << path() << "]:" << *root[path()] << "\n"; ) // 7291. 7359
+	  NOTRACE( std::cerr << "stack().path()" << stack().path() << "\n"; )
+	  NOTRACE( std::cerr << "*stack().l" << *stack().l << "\n"; )
+          NOTRACE( std::cerr << kve::iterator(path(), r) << '\n'; )
 	    stack().push_back(kve::iterator(stack().path(), r)); // 7393
         }
 
@@ -2140,23 +2159,30 @@ template<typename R>
 	     NOTRACE( std::cerr << __LINE__ << " end()" << '\n'; )
 	     it()=(++stack()).value_or(nullptr);
 	  }
-	  NOTRACE(
+	  TRACE(
              if( it()!=it().end() ){
-	       std::cerr << "(" << path() << " + " << *it() << " = " << (path() , *it()) << ").satisfies(" << stack().req() << ")" << '\n';
+	       std::cerr << "(" << path() << " + " << *it() << " = " << (path() + *it()) << ").satisfies(" << stack().req() << ")" << '\n';
              }
            )
 	  if(it() != it().end() && (path() , *it()).satisfies(stack().req0()) != kleen::T){
 	    fail.push_back(*it());
-	    NOTRACE( std::cerr << "fail(" << *it() << ")\n"; )
+	    TRACE( std::cerr << "fail(" << *it() << ")\n"; )
             ++*this;
-          }
+          }{
+	    if( it() != it().end() ){
+	      TRACE( std::cerr << "else pass(" << *it() << ")\n"; );
+	      pass.push_back(*it());
+	    }{
+	      TRACE( std::cerr << "else end(" << ")\n"; );
+	    }
+	  }
 	}else{
-	  NOTRACE( std::cerr << stack().l->log() << "\n"; )
+	  TRACE( std::cerr << "elsif( lval )" << "\n"; )
         }
-       /**/TRACE(std::cerr << "it().r():" << (void *)it().r() << '\n';)
+       /**/NOTRACE( std::cerr << "it().r():" << (void *)it().r() << '\n';)
     }
     iterator operator++(){
-        TRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; )
+        NOTRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; )
         while(1){
 	  NOTRACE( std::cerr << "it():" << it() << "\n"; )
 	  assert( it()!=it().end() );
@@ -2164,8 +2190,8 @@ template<typename R>
 	  NOTRACE( std::cerr << "++it():" << it() << "\n"; ) // ++it():{0x606000003638,end()}
           NOTRACE( std::cerr << "it() == it().end():" << (it() == it().end()) << '\n'; )
 	while( it()==it().end() ){
-	  NOTRACE( std::cerr << "stack().size() : " << stack().size() << '\n'; )
-          split(*this); //
+	  TRACE( std::cerr << "stack().size() : " << stack().size() << '\n'; )
+	    split(*this); //
 	  pass.clear(); fail.clear();
 	  NOTRACE( std::cerr << "stack().size() : " << stack().size() << '\n'; )
 	    if( stack().empty() ){
@@ -2181,13 +2207,13 @@ template<typename R>
 	    }
         }
 	assert( it()!=it().end() ); 
-	TRACE( std::cout << it() << '\n'; )
+	TRACE( std::cerr << it() << '\n'; )
 	if( (path() , *it()).satisfies(stack().req0()) != kleen::T){
           fail.push_back(*it());
-	  NOTRACE( std::cerr<<"fail(" << *it() << ")\n"; )
+	  TRACE( std::cerr<<"fail(" << *it() << ")\n"; )
 	    //   return ++*this;  // // //
         } else {
-	  NOTRACE( std::cerr<<"pass(" << *it() << ")\n"; )
+	  TRACE( std::cerr<<"pass(" << *it() << ")\n"; )
           pass.push_back(*it());
           return *this;
         }
@@ -2215,16 +2241,17 @@ template<typename R>
     //#endif
 
     operator lex_t()const{
-      NOTRACE( std::cout << __PRETTY_FUNCTION__ << '\n'; )
+      TRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; )
       lex_t ret;
       std::vector<lex::tuple<path::lex_t,vertex::lex_t>>r;
       //      for( auto x:*this ){
       for( auto x:*m ){
 	path::lex_t p=x.first;
 	vertex::lex_t v=*x.second;;
-        NOTRACE( std::cout << "{p,v}:" << "{" << p << "," << v << "}"  << '\n'; )
+	TRACE( std::cerr << "[" << p << "]" NOTRACE( << " = " << v ) << "\n"; );
 	lex::tuple<path::lex_t,vertex::lex_t>l{p,v};
-        NOTRACE( std::cout << "l:" << l << '\n'; )
+        NOTRACE( std::cerr << "l:" << l << '\n'; )
+	TRACE( std::cerr << l.size() << "\n"; )
 	r.push_back(l);
       }
       ret=r;
@@ -2232,31 +2259,31 @@ template<typename R>
     }
   lattice(const base_t& b):base_t(b){  }
   lattice(const lex_t& t){
-      NOTRACE( std::cout << __PRETTY_FUNCTION__ << "(" << t << ")" << '\n'; )
+      NOTRACE( std::cerr << __PRETTY_FUNCTION__ << "(" << t << ")" << '\n'; )
       std::vector<lex::tuple<path::lex_t,vertex::lex_t>>v;
       base_t b;
       //      lex::vector<lex::string>lvls=t;
       std::vector<lex::tuple<path::lex_t,vertex::lex_t>>svls=t;
       //      v=t; 
       for( auto x:svls ){
-        NOTRACE( std::cout << "x=(" << qtl::type_name<decltype(x)>() << ")" << x << '\n'; )
+        NOTRACE( std::cerr << "x=(" << qtl::type_name<decltype(x)>() << ")" << x << '\n'; )
 	  lex::tuple<path::lex_t,vertex::lex_t> lt=x;
-          NOTRACE( std::cout << "lt=" << lt << '\n'; )
+          NOTRACE( std::cerr << "lt=" << lt << '\n'; )
 	  std::tuple<path::lex_t,vertex::lex_t> st=lt; 
-          NOTRACE( std::cout << "std::get<0>(st)._this.__size" << std::get<0>(st)._this.size() << '\n'; )
-          NOTRACE( std::cout << "st=" << "{" << std::get<0>(st) << "," << std::get<1>(st) << "}" << '\n'; )
+          NOTRACE( std::cerr << "std::get<0>(st)._this.__size" << std::get<0>(st)._this.size() << '\n'; )
+          NOTRACE( std::cerr << "st=" << "{" << std::get<0>(st) << "," << std::get<1>(st) << "}" << '\n'; )
           auto [lp,lv]=st;
-	  NOTRACE( std::cout << "[(" << qtl::type_name<decltype(lp)>() << ")" << lp << ",(" << qtl::type_name<decltype(lv)>() << ")" << lv << "]\n"; )
+	  NOTRACE( std::cerr << "[(" << qtl::type_name<decltype(lp)>() << ")" << lp << ",(" << qtl::type_name<decltype(lv)>() << ")" << lv << "]\n"; )
 	  path p=lp;
 	  if( lv._this.data()[0]=='f' ){
 	    auto a=1;
 	  }
 	  vertex v=lv;
-          NOTRACE( std::cout << "{p,v}:" << "{" << p << "," << v << "}" << '\n'; )
+          NOTRACE( std::cerr << "{p,v}:" << "{" << p << "," << v << "}" << '\n'; )
 	  auto sv=std::make_shared<vertex>(v);
 	  b[p]=sv;
       }   
-      //      NOTRACE( std::cout << r << '\n'; )
+      //      NOTRACE( std::cerr << r << '\n'; )
       *this=b;
     }
     inline std::ostream &write(std::ostream &os=std::cout, int indent = 0)const{
@@ -2264,21 +2291,25 @@ template<typename R>
       return os;
     }
      void save(const std::string &f="store.dat"){
-     NOTRACE( std::cout << __PRETTY_FUNCTION__ << "(" << f << ")" << '\n'; )
+       //TRACE(
+       std::cerr << __PRETTY_FUNCTION__ << "(" << f << ")" << '\n';
+       //)
      std::ofstream o(f, std::ios::binary);
-     NOTRACE( std::cout << "*this="<< *this << '\n'; )
-     NOTRACE( std::cout << "*m=" << *m << '\n'; )
+     NOTRACE( std::cerr << "*this="<< *this << '\n'; )
+     NOTRACE( std::cerr << "*m=" << *m << '\n'; )
        auto l=(lex_t)*this;
        //       auto l=(lex_t)*m;
-     NOTRACE( std::cout << "l=" << l << '\n'; )
+     NOTRACE( std::cerr << "l=" << l << '\n'; )
        auto s=(std::string)l;
-     NOTRACE( std::cout << "s=" << qtl::visible(s) << '\n'; )
+     NOTRACE( std::cerr << "s=" << qtl::visible(s) << '\n'; )
        //       auto v=(std::string_view)l;
-       //     NOTRACE( std::cout << "v=" << qtl::visible(v) << '\n'; )
+       //     NOTRACE( std::cerr << "v=" << qtl::visible(v) << '\n'; )
      o.write(s.data(),s.size());
     }
     void get(const std::string &f="store.dat"){
-     NOTRACE( std::cout << __PRETTY_FUNCTION__ << "(" << f << ")" << '\n'; )
+      //NOTRACE(
+      std::cerr << __PRETTY_FUNCTION__ << "(" << f << ")" << '\n';
+      //)
        std::ifstream i(f, std::ios::binary | std::ios::ate);
      //     std::streambuf sb;
      //     std::stringbuf sb;
@@ -2287,30 +2318,36 @@ template<typename R>
      i.seekg(0,std::ios_base::end);
      //i.seekg(0,std::istringstream::end);
      auto size=i.tellg();
+     std::cerr << "size=" << size << "\n";
      if( size<=0 ){
        *(base_t*)this=lattice();
+       //std::cerr << __LINE__ << '\n';
        return;
      }
      std::string s1(size,'\0');
      i.seekg(0,std::ios_base::beg);
      //i.seekg(0,std::istrstream::beg);
 
+     //      std::cerr << __LINE__ << '\n';
      i.read(s1.data(),size);
      NOTRACE( std::cerr << "s1:" << qtl::visible(s1) <<  '\n';  )
+       //      std::cerr << __LINE__ << '\n';
      auto r=(lex::raw)s1;
-
+     //      std::cerr << __LINE__ << '\n';
      NOTRACE( std::cerr << "r:" << qtl::visible(r) <<  '\n';  )
        buf=(lex_t)r;
      //*(base_t*)this=lattice(*buf);
+     //      std::cerr << __LINE__ << '\n';
        *(base_t*)m=lattice(*buf);
+       // std::cerr << __LINE__ << '\n';
        NOTRACE( std::cerr << *this << '\n'; )
 	 if( NOTRACE(1+)0 ){
 	   std::string b=(std::string)*buf;
 	   std::string s2=(lex_t)*this;
            if( s2!=b ){
-	     std::cout << "*this" << *this << '\n';
+	     std::cerr << "*this" << *this << '\n';
              std::cerr << "buf:" << qtl::visible(*buf) <<  '\n'; 
-	     std::cout << "s2:" << qtl::visible(s2) << '\n';
+	     std::cerr << "s2:" << qtl::visible(s2) << '\n';
            }
 	   assert(s2==(std::string)*buf);
 	 }
@@ -2333,10 +2370,13 @@ template<typename R>
     root.write(os);
     return os;
   }
+  void clear(){
+    root.clear();
+  }
 
 #if 1
   static std::optional<boundary_t> partcount0(int i, const sample<row> &p, const sample<row> &f, const std::set<boundary_t> &B){
-    NOTRACE( std::cerr << __PRETTY_FUNCTION__ << "(\n" << i << ","  << p << ",\n" << f << "," << B << ")" << '\n'; )
+    TRACE( std::cerr << __PRETTY_FUNCTION__ << "(\n" << i << ","  << p << ",\n" << f << "," << B << ")" << '\n'; )
 
     if( p.empty()||f.empty() ){ return {}; }
     std::optional<boundary_t> ret;
@@ -2349,30 +2389,30 @@ template<typename R>
       p1      = std::count_if(p.begin(), p.end(), lt);
       f1      = std::count_if(f.begin(), f.end(), lt);
       if( p1==0 && f1>0 ){  // some fail | all pass
-        NOTRACE(std::cerr << p1 << "," << f1 << "," << b << '\n'; )
+        TRACE(std::cerr << p1 << "," << f1 << "," << b << '\n'; )
 	b0=b; // possible higher bound
         p0=p1;
         f0=f1;
       }
       if( p0 == 0 && p1 > 0 ){
 	ret = b0; // highest possible low bound
-        NOTRACE(std::cerr << p0 << "," << p1 << "," << f1 << "," << b << '\n';)
+        TRACE(std::cerr << p0 << "," << p1 << "," << f1 << "," << b << '\n';)
         p0=p1;
       }
       if( p1 == p.size() && f1 < f.size() ){ // all pass | some fail
-        NOTRACE(std::cerr << p1 << "," << f1 << "," << b << '\n';)
+        TRACE(std::cerr << p1 << "," << f1 << "," << b << '\n';)
         if( p0<=0 || f0 < f.size() - f1 ){ // if no low bound or high bound isolates more failures
           ret = b;  // lowest possible high bound
         }
         break;
       }
     }
-    NOTRACE( if( ret ){ std::cerr << *ret << '\n'; } )
+    TRACE( if( ret ){ std::cerr << *ret << '\n'; } )
     return ret;
   }
 
   static std::tuple<int,boundary_t> partcount(int i, const sample<row> &p, const sample<row> &f, const std::set<boundary_t> &B){
-    NOTRACE( std::cerr << __PRETTY_FUNCTION__ << "(\n" << i << ","  << p << ",\n" << f << "," << B << ")" << '\n'; )
+    TRACE( std::cerr << __PRETTY_FUNCTION__ << "(\n" << i << ","  << p << ",\n" << f << "," << B << ")" << '\n'; )
     std::tuple<int,boundary_t> ret={-1,{}};
     using val_t=std::remove_cv_t<std::remove_reference_t<decltype(p[0][i])>>;
     if( p.empty()||f.empty() ){ return ret; }
@@ -2391,7 +2431,7 @@ template<typename R>
     std::vector<decltype(fi.begin())>fp;
     pp.reserve(B.size());
     fp.reserve(B.size());
-    NOTRACE( std::cerr << pi.size() << ":" << fi.size() << "\n"; )
+    TRACE( std::cerr << pi.size() << ":" << fi.size() << "\n"; )
     for( auto b:B ){
       auto bp=[b](val_t x){ return x<b; };
       pp.push_back(std::partition(pp.empty()?pi.begin():pp.back(),pi.end(),bp));
@@ -2406,7 +2446,7 @@ template<typename R>
 	  break;
 	}
     }
-    NOTRACE( std::cerr << __FUNCTION__ << "=" << ret << '\n'; )
+    TRACE( std::cerr << __FUNCTION__ << "=" << ret << '\n'; )
     return ret;
   }
 #endif
@@ -2415,29 +2455,29 @@ template<typename R>
   //     }
 
   static std::optional<boundary_t> choosesplit(int i, const lattice::iterator &ki, const std::set<boundary_t> &B){
-    NOTRACE( std::cerr << __PRETTY_FUNCTION__ << "(" << i << "," << ki.stack().predicate.expr()->stringify() << "," << B << ")" << "\n"; );
+    TRACE( std::cerr << __PRETTY_FUNCTION__ << "(" << i << "," << ki.stack().predicate.expr()->stringify() << "," << B << ")" << "\n"; );
     std::optional<boundary_t> ret;
     path p=ki.path();
     for(auto b : B){
-     NOTRACE( std::cerr << b << "\n"; );
+     TRACE( std::cerr << b << "\n"; );
       auto s0= p + segment(i, interval({}, b)) ;
       auto s1= p + segment(i, interval(b,{})) ;
       auto l0=ki.stack().predicate.expr().admits(s0);
       auto l1=ki.stack().predicate.expr().admits(s1);
-      NOTRACE( std::cerr << s0 <<":"<< l0 << ", " << s1 << ":"<< l1 << "\n"; );
+      TRACE( std::cerr << s0 <<":"<< l0 << ", " << s1 << ":"<< l1 << "\n"; );
     }
     return ret;
   }
 
   static void split(const lattice::iterator &ki){
-   NOTRACE(std::cerr << __PRETTY_FUNCTION__ << '\n';);
+   TRACE(std::cerr << __PRETTY_FUNCTION__ << '\n';);
 
     constexpr int threshhold = 2;
     if(ki.fail.size() <= threshhold){
       return;
     }
-   NOTRACE(std::cerr << "ki.path():" << ki.path()<< '\n';);
-   NOTRACE(std::cerr << "confluence[ki.path()]:" << confluence[ki.path()] << '\n';);
+   TRACE(std::cerr << "ki.path():" << ki.path()<< '\n';);
+   TRACE(std::cerr << "confluence[ki.path()]:" << confluence[ki.path()] << '\n';);
 
     auto hints=ki.req().expr()->hints();
     int i = 0;
@@ -2463,7 +2503,7 @@ template<typename R>
     ){
       NOTRACE(std::cerr << "hint:" << i << ":" << x << '\n';);
       if( i<ki.path().size() && ki.path()[i].is_point() ){ continue; }
-      choosesplit( i%ki.path(),ki,x);
+      NOTRACE( choosesplit( i%ki.path(),ki,x); )
       NOTRACE( partcount0(i%ki.path(), ki.pass, ki.fail, x) );
      if( auto b = partcount(i%ki.path(), ki.pass, ki.fail, x); std::get<0>(b)>0 ){
         split(ki, i, std::get<1>(b));
@@ -2474,14 +2514,14 @@ template<typename R>
   
   static void split(const lattice::iterator &ki, int i, const boundary_t &b){
     TRACE( std::cerr << __PRETTY_FUNCTION__ << '(' << ki << "," << i << ',' << b << ")\n"; )
-    TRACE( std::cerr << "root:" << root << '\n'; )
+    NOTRACE( std::cerr << "root:" << root << '\n'; )
     TRACE( std::cerr << "ki.path():" << ki.path() << '\n'; )
     TRACE( std::cerr << "ki.stack():" << ki.stack() << '\n'; )
       boundary_t lb={};
       boundary_t ub={};
       path p=ki.path();
-    NOTRACE( std::cerr << "p:" << p << '\n'; )
-    NOTRACE( std::cerr << "p.size():" << p.size() << "\n"; )
+    TRACE( std::cerr << "p:" << p << '\n'; )
+    TRACE( std::cerr << "p.size():" << p.size() << "\n"; )
     NOTRACE( std::cerr << "confluence[p]:" << confluence[p] << "\n"; )
 
       if( ki.stack().size() ){
@@ -2505,8 +2545,8 @@ template<typename R>
 
       auto s0= p + segment(i, interval({}, b)) ;
       auto s1= p + segment(i, interval(b,{})) ;
-      NOTRACE( std::cerr << s0 << " = " << p <<"+"<< segment(i, interval({}, b)) << '\n'; )
-      NOTRACE( std::cerr << s1 << " = " << p <<"+"<< segment(i, interval(b, {})) << '\n'; )
+      TRACE( std::cerr << s0 << " = " << p <<"+"<< segment(i, interval({}, b)) << '\n'; )
+      TRACE( std::cerr << s1 << " = " << p <<"+"<< segment(i, interval(b, {})) << '\n'; )
 
       root[s0] = std::make_shared<vertex>(r0);
       root[s1] = std::make_shared<vertex>(r1);
@@ -2548,23 +2588,28 @@ template<typename R>
          NOTRACE( std::cerr << v[i] << '\n'; );
          NOTRACE( std::cerr << v[i].div() << '\n'; );
          v[i].div().insert(b);
-         NOTRACE( std::cerr << "s0" << p + segment(i, interval({}, b)) << '\n'; )
-         NOTRACE( std::cerr << "s1"  << p + segment(i, interval(b, {})) << '\n'; )
+         TRACE( std::cerr << "root[" << p + segment(i, interval({}, b)) << "]= make_shared<vertex>(r0)\n"; )
+         TRACE( std::cerr << "root["  << p + segment(i, interval(b, {})) << "]= make_shared<vertex>(r1)\n"; )
 
           root[p + segment(i, interval({}, b))] = std::make_shared<vertex>(r0);
           root[p + segment(i, interval(b, {}))] = std::make_shared<vertex>(r1);
 
+	  TRACE( std::cerr << "root[pp] = " <<  root[pp] << "\n"; )
+	  TRACE( std::cerr << "root["  << pp << "= make_shared<vertex>(v)\n"; )
+
          root[pp]=std::make_shared<vertex>(v);
 
          NOTRACE( std::cerr << std::get<1>(*root[pp])[i] << '\n'; );
-          NOTRACE( std::cerr << *root[pp] << '\n'; );
+	 TRACE( std::cerr << "root[" << p << "]=" << root[p] << '\n'; );
           NOTRACE(std::cerr << "root=" << root << '\n';)
+	 TRACE( std::cerr << "root.erase(" << p << ")\n"; );
+	  root.erase(p);
 	 return;
        }
-    }
+     }
 
-    NOTRACE( std::cerr << "s0" << p + segment(i, interval({}, b)) << '\n'; )
-    NOTRACE( std::cerr << "s1"  << p + segment(i, interval(b, {})) << '\n'; )
+     NOTRACE( std::cerr << "s0" << p + segment(i, interval({}, b)) << '\n'; )
+     NOTRACE( std::cerr << "s1"  << p + segment(i, interval(b, {})) << '\n'; )
 
 #if 1
       NOTRACE( std::cerr << interval(lex::string(std::string(""))) << '\n'; )
@@ -2579,11 +2624,16 @@ template<typename R>
 #endif
       }
 #endif      
+
+    NOTRACE( std::cerr << "root[" << p + segment(i, interval({}, b)) << "= make_shared<vertex>(r0)\n"; )
+    NOTRACE( std::cerr << "root["  << p + segment(i, interval(b, {})) << "= make_shared<vertex>(r1)\n"; )
+
     root[p + segment(i, interval({}, b))] = std::make_shared<vertex>(r0);
     root[p + segment(i, interval(b, {}))] = std::make_shared<vertex>(r1);
 
     auto v = std::vector<splits>(i + 1);
     v[i]   = { {}, { b } };
+    TRACE( std::cerr << "root[" << p << "] = std::make_shared<vertex>(v) \n" );
     root[p] = std::make_shared<vertex>(v);
     NOTRACE(std::cerr << "["<< p << "]" << '\n';)
     NOTRACE(std::cerr << "root="<< root << '\n';)
@@ -2599,10 +2649,11 @@ template<typename R>
        std::cerr << (*m)[{}] << "\n";
    }
    static void dumpconfluence(){
-   NOTRACE( std::cout << "confluence:" << qtl::store::confluence << "\n"; );
-   NOTRACE( operator<<(std::cout << "confluence:",qtl::store::confluence) << "\n"; ); 
+   NOTRACE( std::cerr << "confluence:" << qtl::store::confluence << "\n"; );
+   NOTRACE( operator<<(std::cerr << "confluence:",qtl::store::confluence) << "\n"; ); 
   }
 
+#if 0
    class lval {
      //      std::vector<lex::string>prefix;
      //      path prefix;
@@ -2710,7 +2761,7 @@ template<typename R>
        using base_t::base_t;
      }; // end class lval::iterator
      iterator begin(){
-      /**/NOTRACE(std::cerr << __PRETTY_FUNCTION__ << '(' << predicate << ')' << '\n');
+      /**/TRACE(std::cerr << __PRETTY_FUNCTION__ << '(' << predicate << ')' << '\n');
        NOTRACE(std::cerr << iterator(predicate).stack().predicate << '\n';)
        NOTRACE(std::cerr << l << '\n';)
        NOTRACE(std::cerr << *l << '\n';)
@@ -2720,7 +2771,258 @@ template<typename R>
        return nullptr;
      }
    }; /* end class lval */
+#else
+   static  path trace_path;
+   static  row trace_row;
+  #define BASE_T cppcoro::recursive_generator<qtl::row>
+   class lval:public BASE_T {
+     using base_t = BASE_T;
+#undef BASE_T
+     //      std::vector<lex::string>prefix;
+     //      path prefix;
+     //      std::shared_ptr<class trie> t;
+   public:
+     std::shared_ptr<class lattice> l;
+     path::requirements  predicate;
+     //lval(const std::vector<std::string> &v={}):prefix(v){}
 
+     //     lval(const std::vector<lex::string> &v={},const expr &e={}):prefix(v),predicate(e),t(tp){
+     /*static constexpr*/ auto co_search_leaf(const rows &r)-> cppcoro::recursive_generator<qtl::row>{
+       TRACE(std::cerr << __PRETTY_FUNCTION__ << '\n';)
+      for( auto i:r ){
+	if( (path(),i).satisfies(this->predicate) == kleen::T ){
+	  trace_row=i;
+	  co_yield i;
+	}else{
+	  // TRACE(std::cerr << "fail(" << i << ")" << '\n';)
+        }
+      }
+    TRACE( std::cerr << __FUNCTION__ << " co_return;\n"; )
+      co_return;
+    };
+    /*static*/ auto co_search_vertex(const path &p)->cppcoro::recursive_generator<qtl::row>{
+      TRACE(std::cerr << __PRETTY_FUNCTION__ << '\n';)
+    NOTRACE(std::cerr << l->m << '\n';)
+    NOTRACE(std::cerr << *l->m << '\n';)
+      auto v=(*(this->l->m))[p];
+      trace_path=p;
+	TRACE(std::cerr << v << '\n';)
+    NOTRACE(std::cerr << *v << '\n';)
+    NOTRACE(std::cerr << !v << '\n';)
+      //    if( !v ){ co_return; };
+    if( v->is_leaf() ){
+      co_yield co_search_leaf(v->log());
+    }else{
+      TRACE(std::cerr <<  qtl::type_name<decltype(*v)>() << "\n"; )
+      TRACE(std::cerr <<  qtl::type_name<decltype(v->divs())>() << "\n"; )
+	auto d=choose(v->divs());
+	for( auto s:v->divs()[d] ){
+	  TRACE(std::cerr <<  qtl::type_name<decltype(s)>() << "\n"; ) 
+          TRACE(std::cerr << s << "\n"; )
+	  TRACE(std::cerr << p+segment(d,s) << "\n"; )
+	    co_yield co_search_vertex(p+segment(d,s));
+	}
+    }
+    TRACE( std::cerr << __FUNCTION__ << " co_return;\n"; )
+    co_return;
+  };
+
+
+
+     auto prefix(){
+       return predicate.prefix();
+     }
+   lval(const row &p,  const optexpr &e):lval(path::requirements(p,e)){}
+   lval(const path::requirements &r) : predicate(r), l(rp){
+     NOTRACE(std::cerr << __PRETTY_FUNCTION__ << "(" << &tr << " : " << t.use_count() << ":" << t.get() << ")\n";)
+       /*NO*/TRACE( std::cerr << __PRETTY_FUNCTION__ << "(" << r << ")" << "\n"; );
+
+      /**/NOTRACE(if(e.has_value()){ std::cerr << __FUNCTION__ << '(' << e.value().stringify() << ")\n"; })
+     }
+   lval(const expr &e)
+       : predicate((std::vector<lex::scalar>){}, e)
+       , l(rp){
+       //t=&trie;
+       TRACE( std::cerr << __PRETTY_FUNCTION__ << "\n"; )
+       TRACE( std::cerr << __FUNCTION__ << ".predicate=" << this->predicate << "\n"; )
+     }
+     lval(const lval &l):lval(l.predicate){
+       TRACE( std::cerr << __PRETTY_FUNCTION__ << "\n"; )
+	 TRACE( std::cerr << __FUNCTION__ << ".predicate=" << this->predicate << "\n"; )
+     }
+#if 0
+     lval operator=(const lval&l){
+       TRACE( std::cerr << __PRETTY_FUNCTION__ <<  "\n"; )
+       return lval(l);
+     }
+#endif
+     operator std::vector<std::shared_ptr<class lattice>>() const {
+       std::vector<std::shared_ptr<class lattice>> ret;
+       for(auto x : *l){
+	 ret.push_back(l);
+       }
+       return ret;
+     }
+     auto operator[](const expr &e){
+      /**/NOTRACE(std::cerr << __PRETTY_FUNCTION__ << '(' << e.stringify() << ')' << '\n';)
+	 auto ret = *this;
+      /**/NOTRACE(
+	   if(ret.predicate.expr().has_value()){
+	     std::cerr << ret.predicate.expr()->stringify() << ' := ' << '\n';
+	   })
+       ret.predicate.expr() = e;
+      /**/NOTRACE(std::cerr << ret.predicate.expr().has_value() << ": " << ret.predicate.expr()->stringify() << '\n';)
+       return ret;
+     }
+     auto operator[](const row &v){
+       auto ret               = *this;
+       ret.predicate.prefix() = ret.predicate.prefix() + v;
+       return ret;
+     }
+     void operator=(const row  &v){
+       /*NO*/TRACE(std::cerr << __PRETTY_FUNCTION__ << "(";
+	     std::cerr << predicate << ",";
+	     std::cerr << v;
+	     std::cerr << ")\n";
+      )
+       NOTRACE(std::cerr << "l=" << l << '\n';)
+       NOTRACE(std::cerr << "*l=" << *l << '\n';)
+
+      if( v.size() ){     
+	auto ll=(*this)[v];
+	/*NO*/TRACE( std::cerr << "ll.predicate=" << ll.predicate << '\n'; );
+	/*NO*/TRACE( std::cerr << "ll.l=" << ll.l << '\n'; );
+	/*NO*/TRACE(std::cerr << "l=" << l << '\n';)
+	  /*NO*/TRACE(std::cerr << "*l=" << *l << '\n';)
+	  /*NO*/TRACE(std::cerr << "l->size()=" << l->size() << '\n';)
+#if 0
+	  TRACE( std::cerr << "this=" << *this << "\n";  );
+	  /*
+Undefined symbols for architecture x86_64:
+  "qtl::store::trace_path", referenced from:
+      qtl::operator<<(std::__1::basic_ostream<char, std::__1::char_traits<char> >&, qtl::store::lval::iterator const&) in test-ba4671.o
+  "qtl::store::trace_row", referenced from:
+      qtl::operator<<(std::__1::basic_ostream<char, std::__1::char_traits<char> >&, qtl::store::lval::iterator const&) in test-ba4671.o
+ld: symbol(s) not found for architecture x86_64
+	  */
+#endif
+
+	ll=row();
+
+	//TRACE( std::cerr << "this=" << *this << "\n"; );
+	
+	/*NO*/TRACE( std::cerr << "ll.l=" << ll.l << '\n'; );
+	/*NO*/TRACE(std::cerr << "l=" << l << '\n';)
+	  /*NO*/TRACE(std::cerr << "*l=" << *l << '\n';)
+	  /*NO*/TRACE(std::cerr << "l->size()=" << l->size() << '\n';)
+	return;
+      }
+      auto p = lattice::iterator(predicate,true);
+       NOTRACE(std::cerr << "root:" << root << "\n";);
+       NOTRACE(std::cerr << "v " << v << " p.path() " << p.path() << "\n";);
+       NOTRACE(std::cerr << "*p.v()" << *p.v() << "\n";);
+       NOTRACE(std::cerr << "v%p.path() " << (prefix() + v) % p.path() << "\n";);
+       assert(p.v()->is_leaf());
+       NOTRACE(std::cerr << "std::get<0>(*p.v()):" << std::get<0>(*p.v()) << "\n";);
+       std::get<0>(*p.v()).push_back((prefix() + v) % p.path());
+       NOTRACE(std::cerr << "std::get<0>(*p.v()):" << std::get<0>(*p.v()) << "\n";);
+       NOTRACE(std::cerr << "*p.v()" << *p.v() << "\n";);
+       NOTRACE(std::cerr << "root:" << root << "\n";);
+     }
+
+     void operator=(const std::nullptr_t &n){
+      auto p = lattice::iterator(predicate,true);
+      NOTRACE(std::cerr << __PRETTY_FUNCTION__ << '\n'; )
+       assert(p.v()->is_leaf());
+      NOTRACE( std::cerr << *p.v() << '\n'; )
+      auto d=(prefix()) % p.path();
+      NOTRACE( std::cerr <<  prefix() << " % " << p.path()<< "=" << d << "\n"; );
+      auto v= std::get<0>(*p.v());
+      v.erase(std::remove(v.begin(),v.end(),d),v.end());
+      NOTRACE( std::cerr << *p.v() << '\n'; )
+      std::get<0>(*p.v())=v;
+      NOTRACE( std::cerr << *p.v() << '\n'; )
+     }
+     class iterator:public
+     #if 0
+     base_t::iterator
+     #else
+     std::optional<cppcoro::recursive_generator<qtl::row>>
+     #endif
+     {
+       using base_coro=std::optional<cppcoro::recursive_generator<qtl::row>>;
+       using base_iterator=base_t::iterator;
+       // using base_iterator::base_iterator;
+     using base_coro::base_coro;
+       const lval* B;
+       base_iterator base_it;
+     public:
+       iterator(const lval *b,const lattice &l,const path &p):B(b),base_coro(std::in_place,search_vertex(l,p,b)),base_it(base_coro::value().begin()){
+	 TRACE( std::cerr << 
+		__PRETTY_FUNCTION__ << "(" << b << ",l ," << p << ")" <<  "\n"; )
+	   TRACE( std::cerr << "m_promise=" << base_coro::value().m_promise << "\n"; )
+	 //	 return( search_vertex(*B.l,{},B.predicate.expr()).begin() );
+       }
+       iterator():base_it(nullptr){
+       }
+       iterator begin(){
+	 TRACE( std::cerr << __PRETTY_FUNCTION__ << ":" << __LINE__ << "\n"; )
+	   //  coro=search_vertex(*(B->l),{},B->predicate.expr());
+	   auto i=iterator(B,*(B->l),{});
+	 //         TRACE( std::cerr << "i.m_promise=" << i.m_promise << "\n"; )
+  return i;
+  //         return iterator(B,search_vertex(*(B->l),{},B->predicate.expr()).begin().m_promise);
+	 //	 TRACE( std::cerr << "m_promise=" << this-> m_promise << "\n"; )
+	 //	 TRACE( std::cerr << __FUNCTION__ << " return *this;\n"; )
+	 //	 return *this;
+       }
+       iterator end()const{
+	 TRACE( std::cerr << __PRETTY_FUNCTION__ << ":" << __LINE__ << "\n"; )
+	 return iterator();
+	 //	 return *this;
+       }
+       bool operator!=(const iterator &r)const{
+	 return base_it != r.base_it;
+       }
+       iterator & operator++(){
+ 	 TRACE( std::cerr << __PRETTY_FUNCTION__ << "\n"; )
+ 	 TRACE( std::cerr << __FUNCTION__ << ":" << __LINE__ << " predicate= " << this->B->predicate << "\n"; )
+	 ++base_it;
+ 	 TRACE( std::cerr << __FUNCTION__ << ":" << __LINE__ << " predicate= " << this->B->predicate << "\n"; )
+	 return *this;
+	 /*
+./qtl/store.h:3004:10: error: call to implicitly-deleted copy constructor of 'qtl::store::lval::iterator'
+         return *this;
+                ^~~~~
+./qtl/store.h:2932:21: note: copy constructor of 'iterator' is implicitly deleted because base class 'std::optional<cppcoro::recursive_generator<qtl::row>>' has a deleted copy constructor
+     class iterator:public
+                    ^
+/usr/local/Cellar/llvm/12.0.0/include/c++/v1/optional:689:41: note: explicitly defaulted function was implicitly deleted here
+    _LIBCPP_INLINE_VISIBILITY constexpr optional(const optional&) = default;
+                                        ^
+/usr/local/Cellar/llvm/12.0.0/include/c++/v1/optional:587:7: note: copy constructor of 'optional<cppcoro::recursive_generator<qtl::row>>' is implicitly deleted because base class '__optional_sfinae_ctor_base_t<cppcoro::recursive_generator<qtl::row>>' (aka '__sfinae_ctor_base<is_copy_constructible<recursive_generator<row>>::value, is_move_constructible<recursive_generator<row>>::value>') has a deleted copy constructor
+    , private __optional_sfinae_ctor_base_t<_Tp>
+      ^
+
+	 */
+       }
+       auto operator *(){
+	 return *base_it;
+       }
+     }; /* end class store::lval::iterator */
+     friend std::ostream &operator<<(std::ostream &os, const store::lval::iterator &i){
+       return os << trace_path << ":" << trace_row;
+     }
+     iterator begin(){
+	 TRACE( std::cerr << __PRETTY_FUNCTION__ << ":" << __LINE__ << "\n"; )
+	   return iterator(this,*(this->l),{}).begin();
+     }
+     iterator end(){
+	 TRACE( std::cerr << __PRETTY_FUNCTION__ << ":" << __LINE__ << "\n"; )
+	   return iterator();
+     }
+   }; /* end class store::lval */
+#endif
 public:
    /* index by expression or vector */
    lval operator[](const expr &e){
@@ -2766,7 +3068,9 @@ public:
     return write(std::cout);
   }
   void save(const std::string &f="store.dat"){
-    NOTRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; );
+    //TRACE(
+    std::cerr << __PRETTY_FUNCTION__ << '\n';
+    //);
     NOTRACE( std::cerr << "rp=" << rp << '\n'; );
     NOTRACE( std::cerr << "*rp=" << *rp << '\n'; );
     NOTRACE( std::cerr << "this=" << this << '\n'; );
@@ -2774,12 +3078,148 @@ public:
     rp->save(f);
  }
 
-  void get(const std::string &f="store.dat"){ rp->get(f); }
+  void get(const std::string &f="store.dat"){
+    //TRACE(
+    std::cerr << __PRETTY_FUNCTION__ << '\n';
+    //);
+    rp->get(f);
+  }
+
+template <class T0,class T1>
+friend std::ostream& operator<<(std::ostream& os, const std::pair<T0,T1>& obj){
+  // os << boost::core::demangle(typeid(obj).name()) ;
+  using namespace qtl;
+  qtl::ios_base::fmtflags f;
+  os >> f;
+  //  if( f.verbosity>qtl::ios_base::fmtflags::generic ){
+  //    os << "std::pair";
+  //  }else{
+  os << boost::core::demangle(typeid(obj).name());
+  //  }
+  os << "{"_r << obj.first <<  /*s.sep0*/ ", "_r << obj.second << "}"_r /* << s.sep1 "\n" */ ;
+  return os;
+}
+  static  cppcoro::recursive_generator<qtl::row> search_vertex(const lattice &l,const path &p,const qtl::store::lval *r){
+    TRACE(std::cerr << __PRETTY_FUNCTION__ << " " << __LINE__ << '\n';)
+      TRACE(std::cerr << "l.m=" << l.m << '\n';)
+      TRACE(std::cerr << "*l.m=" << *l.m << '\n';)
+      TRACE(std::cerr << "r=" << r << '\n';)
+      auto v=(*(l.m))[p];
+    TRACE(std::cerr << "v=" << v << '\n';)
+      TRACE(std::cerr << "*v=" << *v << '\n';)
+      TRACE(std::cerr << "!=" << !v << '\n';)
+      //    if( !v ){ co_return; };
+    if( v->is_leaf() ){
+      co_yield search_leaf(v->log(),r);
+    }else{
+      TRACE(std::cerr <<  qtl::type_name<decltype(*v)>() << "\n"; )
+      TRACE(std::cerr <<  qtl::type_name<decltype(v->divs())>() << "\n"; )
+	auto d=choose(v->divs());
+	for( auto s:v->divs()[d] ){
+	  TRACE(std::cerr << __FUNCTION__ <<  qtl::type_name<decltype(s)>() << "\n"; ) 
+          TRACE(std::cerr << s << "\n"; )
+	  TRACE(std::cerr << p+segment(d,s) << "\n"; )
+	  if( auto e=(p+segment(d,s)).satisfies(r->predicate); e !=  kleen::F ){
+	    co_yield search_vertex(l, p+segment(d,s),r);
+	  }else{
+	    TRACE( std::cerr << " skip\n"; )
+	  }
+	}
+    }
+    TRACE( std::cerr << __FUNCTION__ << " co_return;\n"; )
+    co_return;
+  }
+  static cppcoro::recursive_generator<qtl::row> search_leaf(const rows &r, const qtl::store::lval *p){
+    TRACE(std::cerr << __PRETTY_FUNCTION__ << "(" << r << "," << p << ") " << __LINE__ << '\n'; )
+      //      auto local_p=p;
+      for( auto i:r ){
+	//        TRACE(std::cerr << __FUNCTION__ << ":" << __LINE__ << " p=" << p << '\n';)
+	TRACE(std::cerr << "i = " << i << "\n"; );
+	//	TRACE(std::cerr << "path(),i) = " << (path(),i) << "\n"; );
+	//        TRACE(std::cerr << "this->predicate=" << this->predicate << '\n';)
+	if( (path(),i).satisfies(p->predicate) == kleen::T ){
+	  //          TRACE(std::cerr << __FUNCTION__ << ":" << __LINE__ << " p=" << p << '\n' << "local_p=" << local_p << "\n";)
+	    TRACE( std::cerr<< "co_yield " << i << "\n"; )
+	  co_yield i;
+	  //          TRACE(std::cerr << __FUNCTION__ << ":" << __LINE__ << " p=" << p << '\n' << "local_p=" << local_p << "\n";)
+	}else{
+	  TRACE(std::cerr << "fail(" << i << ")" << '\n';)
+        }
+      }
+    TRACE( std::cerr << __FUNCTION__ << " co_return;\n"; )
+      co_return;
+  }
+
+#define BASE_T cppcoro::recursive_generator<qtl::row>
+  class co_lval:public BASE_T {
+     using base_t = BASE_T;
+#undef BASE_T
+  public:
+     std::shared_ptr<class lattice> l;
+     path::requirements  predicate;
+     std::vector<base_t> filters;
+    /*static constexpr*/ auto co_search_leaf(const rows &r)-> cppcoro::recursive_generator<qtl::row>{
+      TRACE(std::cerr << __PRETTY_FUNCTION__ << '\n';)
+      for( auto i:r ){
+	TRACE(std::cerr << "i=" << i << '\n';)
+        TRACE(std::cerr << "this->predicate=" << this->predicate << '\n';)
+	if( (path(),i).satisfies(this->predicate) == kleen::T ){
+	  co_yield i;
+	}else{
+	  TRACE(std::cerr << "fail(" << i << ")" << '\n';)
+        }
+      }
+    TRACE( std::cerr << __FUNCTION__ << " co_return;\n"; )
+      co_return;
+    };
+    /*static*/ auto co_search_vertex(const path &p)->cppcoro::recursive_generator<qtl::row>{
+      TRACE(std::cerr << __PRETTY_FUNCTION__ << '\n';)
+    NOTRACE(std::cerr << l->m << '\n';)
+    NOTRACE(std::cerr << *l->m << '\n';)
+
+      auto v=(*(this->l->m))[p];
+
+    TRACE(std::cerr << v << '\n';)
+    NOTRACE(std::cerr << *v << '\n';)
+    NOTRACE(std::cerr << !v << '\n';)
+      //    if( !v ){ co_return; };
+
+    if( v->is_leaf() ){
+      co_yield co_search_leaf(v->log());
+    }else{
+      TRACE(std::cerr <<  qtl::type_name<decltype(*v)>() << "\n"; )
+      TRACE(std::cerr <<  qtl::type_name<decltype(v->divs())>() << "\n"; )
+	auto d=choose(v->divs());
+	for( auto s:v->divs()[d] ){
+	  TRACE(std::cerr <<  qtl::type_name<decltype(s)>() << "\n"; ) 
+          TRACE(std::cerr << s << "\n"; )
+	  TRACE(std::cerr << p+segment(d,s) << "\n"; )
+	    co_yield co_search_vertex(p+segment(d,s));
+	}
+    }
+    TRACE( std::cerr << __FUNCTION__ << " co_return;\n"; )
+    co_return;
+  };
+  static inline std::shared_ptr<class lattice> rp = std::make_shared<class lattice>(root);
+   co_lval(const row &p,  const optexpr &e):co_lval(path::requirements(p,e)){}
+   co_lval(const path::requirements &r) : predicate(r), l(rp){}
+   co_lval(const expr &e)
+       : predicate((std::vector<lex::scalar>){}, e)
+       , l(rp){
+     }
+
+    class iterator:public base_t::iterator{
+       using base_iterator=base_t::iterator;
+       using base_iterator::base_iterator;
+    };
+    auto begin(){ return co_search_vertex({}).begin(); }
+    auto end(){ return co_search_vertex({}).end(); }
+  }; // end class co_lval
 }; // end class store
     //using expr=store::expr;
 // using optexpr=store::optexpr;
     kleen store::path::pathspec::satisfies(const requirements &r) const {
-       /**/NOTRACE(std::cerr << __PRETTY_FUNCTION__ << '(' << r << ')' << '\n';)
+      /*NO*/TRACE(std::cerr << __PRETTY_FUNCTION__ << '(' << r << ')' << '\n';)
 	NOTRACE( std::cerr << *this << '\n';)
        	auto ret = satisfies(r.prefix());
         if(ret == kleen::F){
@@ -2789,6 +3229,10 @@ public:
 	return ret & satisfies(r.expr());
     }
 
+
+  //
+
+  
 }; // end namespace qtl
 #ifndef NDEBUG
 /// Explicitly instantiate any STL stuff you need in order to debug
@@ -2835,7 +3279,7 @@ namespace qtl{
      auto end(){
        return iterator(nullptr);
      }
-     #define BASE_T std::tuple<lval*,model::base_t::iterator>
+#define BASE_T std::tuple<lval*,model::base_t::iterator>
      class iterator:public BASE_T{
      public:
       using base_t=BASE_T;
@@ -2869,12 +3313,15 @@ namespace qtl{
     	 satisfy();
        }
        auto operator!=(nullptr_t n)const{
+         TRACE( std::cerr << __PRETTY_FUNCTION__ << ":" << __LINE__ << "\n"; )
 	 return it()!=end();
        }
        auto operator!=(const iterator &e)const{
+         TRACE( std::cerr << __PRETTY_FUNCTION__ << ":" << __LINE__ << "\n"; )
 	 return it()!=e.it();
        }
        auto operator!=(const model::base_t::iterator &e)const{
+         TRACE( std::cerr << __PRETTY_FUNCTION__ << ":" << __LINE__ << "\n"; )
 	 return it()!=e;
        }
        template<typename T>
@@ -2914,14 +3361,14 @@ namespace qtl{
     class lval{
   public:
       model::lval m;
-     store::lval s;
+      store::lval s;
       class iterator{
       public:
         model::lval::iterator m;  
         store::lval::iterator s;  
         std::set<row>srows;
         std::set<row>mrows;
-        iterator(const model::lval::iterator &m, const store::lval::iterator &s):m(m),s(s){}
+        iterator(const model::lval::iterator &m, store::lval::iterator s):m(m),s(std::move(s)){}
         //iterator(nullptr_t n):m(n),s(n){}
         auto operator*(){ 
 	 assert( s!=s.end() );
@@ -2930,9 +3377,9 @@ namespace qtl{
          return *m;
         }
         auto operator++(){
-	  NOTRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; )
+	  /*NO*/TRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; )
 	    assert( m!=m.end() );
-	    assert( s!=s.end() );
+	  // assert( s!=s.end() );
 	  NOTRACE( std::cerr << "*m=" << *m << '\n'; )
 	  NOTRACE( std::cerr << "*s=" << *s << '\n'; )
 	    /**/assert( srows.size()==mrows.size() );
@@ -2950,7 +3397,7 @@ namespace qtl{
           return m;
         } 
         auto operator!=(const iterator&e){
-	  NOTRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; )
+	  /*NO*/TRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; )
 	    NOTRACE( std::cerr << std::distance(m.it(),e.m.it()) << '\n'; )
 	    NOTRACE( std::cerr << std::distance(m.it(),m.end()) <<  '\n'; )
 	  if( !(m!=e.m && s!=e.s) ){
@@ -2960,7 +3407,7 @@ namespace qtl{
 	    assert( srows==mrows );
             if( !(m!=m.end()) ){
                     if( s!=s.end() ){ 
-		      WARN( std::cout << "m==m.end() but *s=" << *s << "\n" );
+		      WARN( std::cerr << "m==m.end() but *s=" << *s << "\n" );
                        assert(!(s!=s.end())); 
                       } 
 
@@ -2968,7 +3415,8 @@ namespace qtl{
             }
 	    if( !(s!=s.end()) ){
                  if( m!=m.end() ){
-		   WARN( std::cout << "s==s.end() but *m=" << *m << "\n" );
+		   WARN( std::cerr << "s==s.end() but *m=" << *m << "\n" );
+		   TRACE( std::cerr << "srows = " << srows << "\n" << "mrows = " << mrows << "\n"; )
                        assert(!(m!=m.end()));
                   } 
                   srows.clear();
@@ -2979,14 +3427,18 @@ namespace qtl{
           return m!=e.m;
         }
         auto operator!=(nullptr_t){
-	  NOTRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; )
+	  /*NO*/TRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; )
 	  NOTRACE( std::cerr << std::distance(m.it(),m.end()) <<  std::boolalpha << (s.it()!=s.end()) << '\n'; )
+	    TRACE( std::cerr << __LINE__ << " " <<  s->m_promise << "\n"; )
 	  if( !(m/*.it()*/!=m.end() && s/*.it()*/!=s.end()) ){
+	    TRACE( std::cerr << __LINE__ << " " <<  s->m_promise << "\n"; )
             if( srows!=mrows ){
 	      TRACE( std::cerr << srows << " != " << mrows << "\n"; )
             }
             if( !(m!=m.end()) ){
+	    TRACE( std::cerr << __LINE__ << " " <<  s->m_promise << "\n"; )
                     if( s!=s.end() ){ 
+	    TRACE( std::cerr << __LINE__ << " " <<  s->m_promise << "\n"; )
 		      TRACE( std::cerr << "m==m.end() but *s=" << *s << "\n"; )
    		      TRACE( std::cerr << "mrows=" << mrows << "\n"; )
    		      TRACE( std::cerr << "srows=" << srows << "\n"; )
@@ -2995,10 +3447,10 @@ namespace qtl{
                mrows.clear();
 	    }else if( !(s!=s.end()) ){
                  if( m!=m.end() ){
-		   TRACE( std::cerr << "s==s.end() but *m=" << *m << "\n" );
-   		      TRACE( std::cerr << "mrows=" << mrows << "\n"; )
-   		      TRACE( std::cerr << "srows=" << srows << "\n"; )
-                   TRACE(std::cerr << "store::root=="<< store::root << '\n';)
+		   /*TRACE*/( std::cerr << "s==s.end() but *m=" << *m << "\n" );
+		   /*  TRACE*/( std::cerr << "mrows=" << mrows << "\n" );
+   		   /*   TRACE*/( std::cerr << "srows=" << srows << "\n" );
+                   /*TRACE*/(std::cerr << "store::root=="<< store::root << '\n');
                        assert(!(m!=m.end()));
                   } 
                   srows.clear();
@@ -3010,12 +3462,27 @@ namespace qtl{
           return m/*.it()*/!=m.end();
 	}
       }; // end class test::lval::iterator
-      auto begin(){ return iterator(m.begin(),s.begin()); }
+      auto begin(){
+      TRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; )
+	return iterator(m.begin(),s.begin());
+      }
       auto   end(){ return nullptr; }
       template<typename T>
        lval(const T&t):m(t),s(t){}
-       auto operator=(const row &r){ m=r;  s=r; return *this; }
-       lval operator[](const expr &t){ lval ret=*this; ret.m=ret.m[t]; ret.s=ret.s[t]; return ret; }
+       auto operator=(const row &r){
+	  /*NO*/TRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; )
+	 m=r;
+	 s=r;
+	 return *this;
+       }
+       lval operator[](const expr &t){
+	 TRACE( std::cerr << __PRETTY_FUNCTION__ << "(" << t << ")" << '\n'; )
+	 lval ret=*this;
+	 ret.m=ret.m[t];
+      	 ret.s.predicate.expr()=t;
+         TRACE( std::cerr << "ret.s.predicate=" << ret.s.predicate << "\n"; )
+	 return ret;
+       }
     }; // end class test::lval
      template<typename T> 
        lval operator[](T t){ return lval(t); }
@@ -3023,9 +3490,13 @@ namespace qtl{
      lval operator[](const expr &t){ return lval(t); }
      lval operator[](const store::path::requirements &t){ return lval(t); }
 
-     inline std::ostream &write(std::ostream &os=std::cerr, int indent = 0)const{ 
+    inline std::ostream &write(std::ostream &os=std::cout, int indent = 0)const{ 
       os << "{model=" << m.base << ",\nstore=" << s << "\n}"; 
       return os;
+    }
+    void clear(){
+      m.base.clear();
+      s.clear();
     }
   }; // end class test
   std::ostream &operator<<(std::ostream &os, const test &o){
@@ -3035,15 +3506,25 @@ namespace qtl{
 
 }; // end namespace qtl
 qtl::test pl;
+
+std::stringstream fss;
+
 #include "randstream.h"
-qtl::randstream rnd(std::cin);
+qtl::randstream rnd(
+#ifdef FUZZING
+		    fss
+#else
+		    fss
+		    //		    std::cin
+#endif
+		    );
 //qtl::randstream rnd;
 
 lex::string rndletter(const std::string &l/*="etaoinshrdlcumwfgypbvkjxqz "*/){
- TRACE( std::cout << __PRETTY_FUNCTION__  << '\n'; )      
+ TRACE( std::cerr << __PRETTY_FUNCTION__  << '\n'; )      
   lex::string ret;
   ret += l[std::min(rnd(0,l.size()-1),rnd(0,l.size()-1))];
- TRACE( std::cout << __FUNCTION__ << "=" << ret << '\n'; )      
+ TRACE( std::cerr << __FUNCTION__ << "=" << ret << '\n'; )      
   return ret;
 }
 
@@ -3076,6 +3557,9 @@ char rndletter(const std::vector<std::tuple<char,double>>&v={
   {'e', 0.849508864176989}, // 424334265762
   {'_', 1}, // 721541698508
  }){
+  //TRACE(
+  //  std::cerr << __PRETTY_FUNCTION__  << '\n';
+  //)
   return std::get<0>(v[ rnd( (std::function<double(int)>) [&v](int i){ return std::get<1>(v[i]); },0,(int)v.size()-1) ]);
 }
   static const  std::vector<std::tuple<char,double>>firstletter={
@@ -3168,17 +3652,24 @@ char rndletter(const std::vector<std::tuple<char,double>>&v={
     //  {'*', 1}, // 2189762617535
   };
 
-lex::string rndstring(){
- TRACE( std::cout << __PRETTY_FUNCTION__  << '\n'; )      
+lex::string rndstring(int w=2){
+  // TRACE(
+  std::cerr << __FUNCTION__  << "(" << w << ")" << '\n';
+  //)      
   lex::string ret;
   char c=' ';
  constexpr double l=4;
   double p=exp(-l);
   double s=p;
-  double u=rnd(0,262143)/262144.0;
-  int i=0;
-  while( ret.empty()|| s<u ){
-    s += (p *= l/++i);
+  //  double u=rnd(0,262143)/262144.0;
+  int i=1;
+  while( rnd(0.9/i) && !rnd.eof() ){
+    ++i;
+    std::cerr << "rnd(" << 0.9/i << ")\n"; 
+  }
+  while( ret.size()<i || (c==' '&&rnd(1.0/ret.size())) ){
+  //while( ret.empty()|| s<u ){
+  //    s += (p *= l/++i);
     switch( c ){
     case ' ':{
       c=rndletter( firstletter );
@@ -3190,56 +3681,93 @@ lex::string rndstring(){
       c=rndletter( afterconsonant );
     };break;
     }
+    if( c==' ' && --w<0  ){ break; }
     ret += c;
   }
- TRACE( std::cout << __FUNCTION__ << "=" << ret << '\n'; )      
+  //TRACE(
+  //  std::cerr << __FUNCTION__ << "=" << ret << '\n';
+  //)      
   return ret;
 }
 
 qtl::row rndrow(){
- TRACE( std::cout << __PRETTY_FUNCTION__  << '\n'; )      
+  // TRACE(
+  //   std::cerr << __PRETTY_FUNCTION__  << '\n';
+  //   )      
   qtl::row ret;
-  for( auto i=rnd(0,3)+rnd(0,3); i>0; --i ){
-    ret.push_back(rndstring());
-   TRACE( std::cout << "ret=" << ret  << '\n'; )      
+  for( auto i=rnd(0,3)+rnd(0,2); i>0; --i ){
+    ret.push_back(rndstring(ret.size()));
+    //TRACE(
+    //  std::cerr << __FUNCTION__ << "=" << ret  << '\n';
+    //)      
   }
+#if 0
   if( ret.size() > 1  && ret[0].size()>1  ){
     std::string s=ret[0];
-   TRACE( std::cout << "s=" << s  << '\n'; )      
+   TRACE( std::cerr << "s=" << s  << '\n'; )      
     auto p=std::find(s.begin(),s.end(),' ');
     if( p==s.end() ){ --p; }
      s.erase(p,s.end());
-   TRACE( std::cout << "s=" << s  << '\n'; )      
-    ret[0]=s;
-   TRACE( std::cout << "ret=" << ret  << '\n'; )      
+     TRACE( std::cerr << "s=" << s  << '\n'; )      
+      ret[0]=s;
+     TRACE( std::cerr << "ret=" << ret  << '\n'; )      
   }
- TRACE( std::cout << __FUNCTION__ << "=" << ret << '\n'; )      
+#endif
+ TRACE( std::cerr << __FUNCTION__ << "=" << ret << '\n'; )      
   return ret;
 }
-
-int main( int argc, char *argv[] ){ 
-std::ifstream in;
- std::streambuf *cinbuf;
-if( argc==2 && std::strcmp(argv[1],"dict")==0 ){
-  std::cout << "\"@\"\n\"?\"\n";
-   exit(0);
-   for( auto i='@'; i<='_'; ++i ){ std::cout << '"' <<  i << '"'<< '\n'; }
-   exit(0);
- }else if(  argc==2 && std::strcmp(argv[1],"fuzz")==0 ){
-  for( auto i='@'; i<='_'; ++i ){ std::cout << i;  }
-   std::cout << '\n';
-   exit(0);
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+  int seed=0;
+  std::cerr << __FUNCTION__ << '(';
+ std::cerr << (void*)Data << "," << Size << ")\n";
+ if( Size==0 ){
+   return 0;
  }
-if( argc==1 || argv[1][0] == '<' ){
-    if( argc>1 && argv[1][0] == '<' ){
-      in = std::ifstream(argv[1][1]?argv[1]+1:argv[2]);
-      cinbuf = std::cin.rdbuf(); 
-      std::cin.rdbuf(in.rdbuf()); //redirect std::cin
+  if( Size > 4 ){
+    seed = *(int *)Data;
+    Data +=4;
+    Size -=4;
   }
-}
-  using namespace lex::literals;
+    std::cerr << "seed=" << seed << "\n";
+    rnd.seed(seed);
+    std::cerr << "Size=" << Size << "\n";
+
+  //  std::mt19937 gen(seed);
+
+  std::cerr <<  "pl.m.base.size()=" <<  pl.m.base.size() << "\n";
+  pl.clear();
+  std::cerr <<  "pl.m.base.size()=" <<  pl.m.base.size() << "\n";
+  std::string s((char *)Data,Size);
+  std::cerr << "s.size()=" << s.size() << "\n";
+  std::cerr << "s.front()=" << (int)s.front() << "\n";
+
+  //  std::cerr << "fss.eof()=" << fss.eof() << "\n";
+  //  std::cerr << "fss.fail()=" << fss.fail() << "\n";
+  //  std::cerr << "fss.bad()=" << fss.bad() << "\n";
+  //  std::cerr << "fss.tellg()=" << fss.tellg() << "\n";
+  //  std::cerr << "fss.eof()=" << fss.eof() << "\n";
+  //  std::cerr << "fss.fail()=" << fss.fail() << "\n";
+  //  std::cerr << "fss.bad()=" << fss.bad() << "\n";
+  fss.str(s);
+  //  std::cerr << "fss.eof()=" << fss.eof() << "\n";
+  //  std::cerr << "fss.fail()=" << fss.fail() << "\n";
+  //  std::cerr << "fss.bad()=" << fss.bad() << "\n";
+  //  std::cerr << "fss.clear()" << "\n";
+  fss.clear();
+  std::cerr << "fss.eof()=" << fss.eof() << "\n";
+  std::cerr << "fss.fail()=" << fss.fail() << "\n";
+  std::cerr << "fss.bad()=" << fss.bad() << "\n";
+
+  std::cerr << "fss.tellg()=" << fss.tellg() << "\n";
+  std::cerr << "fss.peek()=" << (int)fss.peek() << "\n";
+
+pid_t pid = getpid();
+  std::string tempname="p." + std::to_string(getpid())+".tmp";
+int bs=0;
+  
+
+using namespace lex::literals;
 #if 0
-  {
 //    TRACE( std::cout << std::boolalpha << (std::is_same_v<lex::string,lex::interval<lex::string>>) << "\n"; )
 {
     auto t=lex::tuple{"AA\0BB"_s,"YY\0ZZ"_s};
@@ -3278,6 +3806,148 @@ if( argc==1 || argv[1][0] == '<' ){
     NOTRACE( std::cout << qtl::type_name<decltype(cd_ef)>() << '\n'; )
  }
 #endif
+
+  std::set<qtl::row> uniq;
+  
+  std::vector<std::string>ops={"<","<=","=",">=",">","!="};
+  const std::deque<long>pos0={0,0,0};
+  std::deque<long>pos={0,0,0};
+  pos=pos0;
+  while( !fss.eof() ){
+    auto r=rndrow();
+    //TRACE(  std::cerr << " pl.m.base.size()=" <<  pl.m.base.size() << "\n"; )
+    TRACE( std::cerr << "r=" << r << '\n'; )
+      if( r.size()>1 && !uniq.count(r) ){
+	//std::cerr << __LINE__ << "\n";
+	  int n=1+(rnd(0,rnd(0,std::max(r.size(),(size_t)2)-2)));
+          auto k=qtl::row(r.begin(),r.begin()+n);
+          auto v=qtl::row(r.begin()+n,r.end());
+          std::cerr << '[' << k <<  "]=" <<  v << '\n';
+	  pl[k]=v;      
+	  uniq.insert(r);
+    }else if( pl.m.base.size() ){
+	//	std::cerr << __LINE__ << "\n";
+	int o=rnd(0,ops.size()+1);
+	int m=rnd(0,pl.m.base.size()-1);
+        r=pl.m.base[m];
+        TRACE( std::cerr << "m[" << m << "]==" << r << '\n'; )
+	if( o>ops.size() ){
+	    TRACE( std::cerr << '[' << r <<  "]=nullptr" << '\n'; )
+	     //pl[r]=nullptr;      
+	    //if( rnd(0,log(pl.m.base.size())) > r.size() ){
+	    // int n=rnd(0,r.size()-1); 
+	    //  NOTRACE( std::cerr << '[' << "col."<<n << "=" << r[n] <<  "]=nullptr" << '\n'; )
+	    //}
+	}else if( o==ops.size() ){
+	  //std::cerr << __LINE__ << "\n";
+	    int n=rnd(1,r.size()-1); 
+	    while( ((r[n]=rndstring(n)), uniq.count(r)) ){}
+	    //n=1+(rnd(0,rnd(0,std::max(r.size(),(size_t)2)-2)));
+          auto k=qtl::row(r.begin(),r.begin()+n);
+          auto v=qtl::row(r.begin()+n,r.end());
+          std::cerr << '[' << k <<  "]=" <<  v << '\n';
+	  pl[k]=v;      
+	  uniq.insert(r);
+	}else{
+	  //std::cerr << __LINE__ << "\n";
+    	    int n=rnd(0,r.size()-1); 
+            auto k=qtl::row(r.begin(),r.begin()+(n>1?rnd(0,n-1):0));
+	    //int o=rnd(0,ops.size()-1);
+	    auto op=ops[o];
+
+    	    std::cerr << "pl[" << k << "][ " << "col."<<n << op << r[n] <<  " ]" << '\n';
+
+	    std::ostringstream s;
+            s<<n;
+	    qtl::expr col=qtl::expr(qtl::op::column,s.str());
+	    qtl::expr val=qtl::expr(qtl::op::lit,qtl::interval(r[n]));
+
+	    NOTRACE( std::cerr << col.stringify() << op << val.stringify() << "\n"; )
+	      qtl::op cmp=std::vector<qtl::op>{qtl::op::less,qtl::op::less_equal,qtl::op::equal_to,qtl::op::greater_equal,qtl::op::greater,qtl::op::not_equal_to}[o];
+
+	    qtl::expr e(cmp,{col,val});
+	    NOTRACE( std::cerr << e.stringify() << "\n"; )
+	    NOTRACE( pl.write(); )
+	    for( auto r:pl[k][ e ] ){
+		std::cerr << r << "\n";
+            }
+	}
+    }
+    TRACE( std::cerr << "m.size()=" << pl.m.base.size() << '\n'; )
+      if( pl.m.base.size()==10 ){
+	;TRACE( std::cerr << "debughook\n"; );
+      }
+      NOTRACE(  pl.s.write(); )
+	if( bs!=pl.m.base.size() && rnd(1.0/sqrt(1.0+pl.m.base.size())) ){
+	  bs=pl.m.base.size();
+	qtl::store::root.save(tempname);
+	qtl::store::root.get(tempname);
+      }
+      //std::cerr << __LINE__ << '\n';
+      //   std::cerr << pos.size() << '\n';
+    pos.pop_front();
+    //std::cerr << __LINE__ << '\n';
+    pos.push_back(rnd.tellg());
+    std::cerr << pos.back() << '\n';
+    static auto p2=[](long n){ return n & -n; };
+    static auto m2=[](long n){ return p2(n)-1; };
+    static auto next_power_2=[](long n){
+      n -= 1;
+      n |= n>>1;
+      n |= n>>2;
+      n |= n>>4;
+      n |= n>>8;
+      return n+1;
+    };
+    //std::cerr << __LINE__ << '\n';
+    long m=m2(pos[0])|m2(pos[1])|3;
+    //std::cerr << __LINE__ << '\n';
+    long s=next_power_2(pos.back()&m)+(pos.back()&~m);
+    //std::cerr << __LINE__ << '\n';
+    TRACE( qtl::cerr << pos << "->" << s << "=" << std::oct << s << std::dec << '\n'; )
+
+    TRACE( qtl::cerr << m2(pos[0]) << "|" << m2(pos[1]) << "|3 = " << m << '\n'; )
+    TRACE( qtl::cerr << "np2(" << (pos.back()&m) << ")+" << (pos.back()&~m) << "\n"; )
+    // std::cerr << s << '\n';
+    rnd.seekg(s);
+    pos.back()=s;
+    std::cerr << s<< "," << rnd.tellg() << '\n';
+  }
+//  TRACE( pl.s.write(); )
+//  qtl::store::root.save("s.");
+
+TRACE( std::cerr << pl.m.base.size() << " root:" << qtl::store::root << "\n"; );
+  return 0;  // Non-zero return values are reserved for future use.
+}
+
+
+#ifndef FUZZING
+int main( int argc, char *argv[] ){ 
+std::ifstream in;
+ std::streambuf *cinbuf;
+if( argc==2 && std::strcmp(argv[1],"dict")==0 ){
+  std::cout << "\"@\"\n\"?\"\n";
+   exit(0);
+   for( auto i='@'; i<='_'; ++i ){ std::cout << '"' <<  i << '"'<< '\n'; }
+   exit(0);
+ }else if(  argc==2 && std::strcmp(argv[1],"fuzz")==0 ){
+  for( auto i='@'; i<='_'; ++i ){ std::cout << i;  }
+   std::cout << '\n';
+   exit(0);
+ }
+if( argc==2 ){
+  if(std::ifstream is{argv[1], std::ios::binary | std::ios::ate}) {
+        auto size = is.tellg();
+        std::string str(size, '\0'); // construct string to stream size
+        is.seekg(0);
+        if( is.read(&str[0], size) ){
+	  LLVMFuzzerTestOneInput((uint8_t *)&str[0],size);
+	  exit(0);
+        }
+    }
+}
+
+using namespace lex::literals;
 #if 0
     auto cd_ef = ("cd"_s < x::x < "ef"_s);
     TRACE( std::cout << "cd_ef=" << cd_ef << '\n'; )
@@ -3348,10 +4018,10 @@ if( argc==1 || argv[1][0] == '<' ){
       qtl::expr(qtl::op::lit,qtl::kleen::T),
     };
     for( auto q:queries ){
-      TRACE( std::cout << "root:" << qtl::store::root << "\n"; );
-      std::cout <<  q.stringify() << "\n"; 
+      TRACE( std::cerr << "root:" << qtl::store::root << "\n"; );
+      std::cerr <<  q.stringify() << "\n"; 
       for( auto r: pl[q] ){
-	std::cout << r << "\n";	
+	std::cerr << r << "\n";	
       }
      TRACE( qtl::store::dumpconfluence(); )
     }
@@ -3377,33 +4047,33 @@ if( argc==1 || argv[1][0] == '<' ){
   std::deque<long>pos={0,0,0};
   while( !std::cin.eof() ){
     auto r=rndrow();
-    TRACE( std::cout << "r=" << r << '\n'; )
+    TRACE( std::cerr << "r=" << r << '\n'; )
       if( r.size()>1 && !uniq.count(r) ){
 	  int n=1+(rnd(0,rnd(0,std::max(r.size(),(size_t)2)-2)));
           auto k=qtl::row(r.begin(),r.begin()+n);
           auto v=qtl::row(r.begin()+n,r.end());
-          std::cout << '[' << k <<  "]=" <<  v << '\n';
+          std::cerr << '[' << k <<  "]=" <<  v << '\n';
 	  pl[k]=v;      
 	  uniq.insert(r);
     }else if( pl.m.base.size() ){
 	int o=rnd(0,ops.size()+1);
 	int m=rnd(0,pl.m.base.size()-1);
         r=pl.m.base[m];
-        TRACE( std::cout << "m[" << m << "]==" << r << '\n'; )
+        TRACE( std::cerr << "m[" << m << "]==" << r << '\n'; )
 	if( o>ops.size() ){
-	    TRACE( std::cout << '[' << r <<  "]=nullptr" << '\n'; )
+	    TRACE( std::cerr << '[' << r <<  "]=nullptr" << '\n'; )
 	     //pl[r]=nullptr;      
 	    //if( rnd(0,log(pl.m.base.size())) > r.size() ){
 	    // int n=rnd(0,r.size()-1); 
-	    //  NOTRACE( std::cout << '[' << "col."<<n << "=" << r[n] <<  "]=nullptr" << '\n'; )
+	    //  NOTRACE( std::cerr << '[' << "col."<<n << "=" << r[n] <<  "]=nullptr" << '\n'; )
 	    //}
 	}else if( o==ops.size() ){
 	    int n=rnd(1,r.size()-1); 
-	    while( ((r[n]=rndstring()), uniq.count(r)) ){}
+	    while( ((r[n]=rndstring(n)), uniq.count(r)) ){}
 	    //n=1+(rnd(0,rnd(0,std::max(r.size(),(size_t)2)-2)));
           auto k=qtl::row(r.begin(),r.begin()+n);
           auto v=qtl::row(r.begin()+n,r.end());
-          std::cout << '[' << k <<  "]=" <<  v << '\n';
+          std::cerr << '[' << k <<  "]=" <<  v << '\n';
 	  pl[k]=v;      
 	  uniq.insert(r);
 	}else{
@@ -3412,25 +4082,25 @@ if( argc==1 || argv[1][0] == '<' ){
 	    //int o=rnd(0,ops.size()-1);
 	    auto op=ops[o];
 
-    	    std::cout << "pl[" << k << "][ " << "col."<<n << op << r[n] <<  " ]" << '\n';
+    	    std::cerr << "pl[" << k << "][ " << "col."<<n << op << r[n] <<  " ]" << '\n';
 
 	    std::ostringstream s;
             s<<n;
 	    qtl::expr col=qtl::expr(qtl::op::column,s.str());
 	    qtl::expr val=qtl::expr(qtl::op::lit,qtl::interval(r[n]));
 
-	    NOTRACE( std::cout << col.stringify() << op << val.stringify() << "\n"; )
+	    NOTRACE( std::cerr << col.stringify() << op << val.stringify() << "\n"; )
 	      qtl::op cmp=std::vector<qtl::op>{qtl::op::less,qtl::op::less_equal,qtl::op::equal_to,qtl::op::greater_equal,qtl::op::greater,qtl::op::not_equal_to}[o];
 
 	    qtl::expr e(cmp,{col,val});
-	    NOTRACE( std::cout << e.stringify() << "\n"; )
+	    NOTRACE( std::cerr << e.stringify() << "\n"; )
 	    NOTRACE( pl.write(); )
 	    for( auto r:pl[k][ e ] ){
-		std::cout << r << "\n";
+		std::cerr << r << "\n";
             }
 	}
     }
-    TRACE( std::cout << "m.size()=" << pl.m.base.size() << '\n'; )
+    TRACE( std::cerr << "m.size()=" << pl.m.base.size() << '\n'; )
       if( pl.m.base.size()==10 ){
 	;TRACE( std::cerr << "debughook\n"; );
       }
@@ -3456,18 +4126,18 @@ if( argc==1 || argv[1][0] == '<' ){
     long m=m2(pos[0])|m2(pos[1])|3;
     long s=next_power_2(pos.back()&m)+(pos.back()&~m);
 
-    TRACE( std::cout << pos << "->" << s << "=" << std::oct << s << std::dec << '\n'; )
+    TRACE( qtl::cout << pos << "->" << s << "=" << std::oct << s << std::dec << '\n'; )
 
-    TRACE( std::cout << m2(pos[0]) << "|" << m2(pos[1]) << "|3 = " << m << '\n'; )
-    TRACE( std::cout << "np2(" << (pos.back()&m) << ")+" << (pos.back()&~m) << "\n"; )
+    TRACE( qtl::cout << m2(pos[0]) << "|" << m2(pos[1]) << "|3 = " << m << '\n'; )
+    TRACE( qtl::cout << "np2(" << (pos.back()&m) << ")+" << (pos.back()&~m) << "\n"; )
     rnd.seekg(s);
     pos.back()=s;
   }
 //  TRACE( pl.s.write(); )
 //  qtl::store::root.save("s.");
-TRACE( std::cout << "root:" << qtl::store::root << "\n"; );
+TRACE( std::cerr << "root:" << qtl::store::root << "\n"; );
 #if 0
-TRACE( std::cout << "confluence:" << qtl::store::confluence << "\n"; ); // 
+TRACE( std::cerr << "confluence:" << qtl::store::confluence << "\n"; ); // 
 /*
 ./qtl/store.h:3338:35: error: use of overloaded operator '<<' is ambiguous (with operand types 'basic_ostream<char, std::__1::char_traits<char> >' and 'std::map<path, std::optional<std::vector<splits> > >')
 ./qtl/out.h:602:23: note: candidate function [with T = std::__1::map<qtl::store::path, std::__1::optional<std::__1::vector<qtl::store::splits, std::__1::allocator<qtl::store::splits> > >, std::__1::less<qtl::store::path>, std::__1::allocator<std::__1::pair<const qtl::store::path, std::__1::optional<std::__1::vector<qtl::store::splits, std::__1::allocator<qtl::store::splits> > > > > >, $1 = void, $2 = std::__1::__map_iterator<std::__1::__tree_iterator<std::__1::__value_type<qtl::store::path, std::__1::optional<std::__1::vector<qtl::store::splits, std::__1::allocator<qtl::store::splits> > > >, std::__1::__tree_node<std::__1::__value_type<qtl::store::path, std::__1::optional<std::__1::vector<qtl::store::splits, std::__1::allocator<qtl::store::splits> > > >, void *> *, long> >]
@@ -3481,10 +4151,10 @@ static  std::ostream& operator<<(std::ostream& os, const T& obj)
   qtl::store::dumpconfluence();
 #endif
 
-//qtl::store::operator<<(std::cout << "confluence:", qtl::store::dumpconfluence());
-//qtl::operator<<(std::cout << "confluence:", qtl::store::dumpconfluence());
+//qtl::store::operator<<(std::cerr << "confluence:", qtl::store::dumpconfluence());
+//qtl::operator<<(std::cerr << "confluence:", qtl::store::dumpconfluence());
 #if 0
-operator<<(std::cout << "confluence:", qtl::store::dumpconfluence());
+operator<<(std::cerr << "confluence:", qtl::store::dumpconfluence());
 /*
 ./qtl/store.h:3342:1: error: no matching function for call to 'operator<<
  */
@@ -3492,7 +4162,8 @@ operator<<(std::cout << "confluence:", qtl::store::dumpconfluence());
 #endif
     TRACE( qtl::store::dumpsharedmap(); )    
 
-//  std::cout << "done\n";
-operator<<(std::cout, "done\n");
+//  std::cerr << "done\n";
+operator<<(std::cerr, "done\n");
 }
+#endif
 #endif
