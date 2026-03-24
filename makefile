@@ -1,44 +1,21 @@
-CXX=g++
-CXX=clang++ 
-# CXXFLAGS= -v -Xlinker -L/usr/local/opt/llvm/lib -fno-omit-frame-pointer -fno-optimize-sibling-calls -I ~/boost_1_70_0
-CXXFLAGS= -v  -Xlinker -L/usr/local/opt/llvm/lib -fno-optimize-sibling-calls -I  /usr/local/opt/boost/include/
+CXX=clang++
 
-#CXXFLAGS += -fsave-optimization-record -fprofile-instr-generate -fcoverage-mapping -ftest-coverage -fprofile-arcs
-# -fsanitize-memory-track-origins 
-# -fno-sanitize-address-use-after-scope
-g++_includepath=/usr/local/include/c++/8.0.0:/usr/local/opt
-g++-8_includepath=$(CPLUS_INCLUDE_PATH)
-clang++_includepath:=$(CPLUS_INCLUDE_PATH) 
-# clang++_flags= -glldb --std=c++2a -fdebug-macro -fstandalone-debug -fsave-optimization-record -fprofile-instr-generate -fcoverage-mapping -fdiagnostics-show-template-tree -L/usr/local/opt/llvm/lib -I/usr/local/opt/llvm/include -I /Library/Developer/CommandLineTools/usr/lib/clang/11.0.0/include -isystem /Library/Developer/CommandLineTools/usr/include/c++/v1 # -isystem /usr/local/Cellar/llvm/9.0.0_1/include/c++/v1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk
-clang++_flags= -glldb --std=c++2a -fdebug-macro -fstandalone-debug -fsave-optimization-record -fprofile-instr-generate -fcoverage-mapping -fdiagnostics-show-template-tree -isystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1/ -L/usr/local/opt/llvm/lib -isystem /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -isystem /Library/Developer/CommandLineTools/usr/include/c++/v1 -isystem /usr/local/Cellar/llvm/9.0.0_1/include/c++/v1
-g++_flags=--std=c++17 -fno-omit-frame-pointer -fpermissive
-g++-8_flags=--std=c++17
-CXXFLAGS+=$($(firstword $(CXX))_flags) -I ~/boost_1_70_0
-#CPLUS_INCLUDE_PATH=$($(firstword $(CXX))_includepath)
-#ifeq ($(CXX),clang++)
-#CXXFLAGS=--std=c++17 -include /usr/local/Cellar/llvm/6.0.0/lib/clang/6.0.0/include/emmintrin.h  -Xlinker -v -Xlinker -L/usr/local/opt/llvm/lib 
+# C++23 for coroutines support (final standard, not early C++20)
+CXXFLAGS= -v -Xlinker -L/opt/homebrew/opt/llvm/lib -fno-omit-frame-pointer -I/opt/homebrew/include
 
-#endif
-#ifeq ($(CXX),g++)
-#CPLUS_INCLUDE_PATH=/usr/local/include/c++/8.0.0
-#endif
-#CXXFLAGS=--std=c++17 -include /usr/local/Cellar/llvm/6.0.0/lib/clang/6.0.0/include/emmintrin.h  -Xlinker -v -Xlinker -L/usr/local/opt/llvm/lib 
-#CXXFLAGS += -lboost_regex
+clang++_flags= -glldb --std=c++23 -fdebug-macro -fstandalone-debug -fdiagnostics-show-template-tree
+g++_flags=--std=c++23 -fno-omit-frame-pointer -fpermissive
+
+CXXFLAGS+=$($(firstword $(CXX))_flags)
+
 ERROR_LEVEL=-1
 FXX=/usr/local/bin/afl/afl-clang++
 FUZZ=/usr/local/bin/afl/afl-fuzz
-#FFLAGS=-d
 FENV=AFL_NO_ARITH=1 AFL_EXIT_WHEN_DONE=1 AFL_HANG_TMOUT=100
 FDIR=fuzz
-SPLIT=perl -pe 'BEGIN{$$a="aa"}open STDOUT,">$$ARGV[0]".$$a++;END{}' - 
-
-#printenv:
-#	printenv ; echo CXX=$(CXX); echo CXXFLAGS=$(CXXFLAGS); echo CPLUS_INCLUDE_PATH=$(CPLUS_INCLUDE_PATH) ; 
-#	echo $(CXX)_includepath $($(CXX)_includepath)
-#	echo $(CXX)_flags $($(CXX)_flags)
+SPLIT=perl -pe 'BEGIN{$$a="aa"}open STDOUT,">$$ARGV[0]".$$a++;END{}' -
 
 .SECONDARY:
-
 .SUFFIXES:
 
 %.test.log: %.test.out $(FDIR)/%.in/aa
@@ -54,47 +31,43 @@ store.test.out: qtl/number.h qtl/tree.h qtl/randstream.h qtl/interval.h qtl/cont
 
 sql.test.out: qtl/tree.h qtl/expr.h qtl/number.h qtl/interval.h qtl/store.h qtl/container.h
 
-expr.test.out: qtl/tree.h qtl/interval.h qtl/number.h
-
 canonical.out: canonical.cpp
 
 %.out: %.cpp
 	$(CXX) $(CXXFLAGS) -v -o $@ -g3 $<
 
 %.test.out: qtl/%.h qtl/out.h qtl/string.h
-	( $(CXX) $(CXXFLAGS) -v -o $@ -g3  -DTEST_H='"'$<'"' -fsanitize=address -fdiagnostics-color=always test.cpp 2>&1 && cp -av $? compiles  ) | tee ./$(*F).make.$(subst /,_,$(firstword ${CXX})).log
+	( $(CXX) $(CXXFLAGS) -v -o $@ -g3  -DTEST_H='"'$<'"' -fdiagnostics-color=always test.cpp 2>&1 && cp -av $? compiles  ) | tee ./$(*F).make.$(subst /,_,$(firstword ${CXX})).log
 
 %.test.out: qtl/%.hpp
-	$(CXX) -o $@ $(CXXFLAGS) -DTEST_H='"'$<'"'  -fsanitize=address test.cpp  
+	$(CXX) -o $@ $(CXXFLAGS) -DTEST_H='"'$<'"'  test.cpp
 
 %.error.log: %.error.out
 	 ./$(*F).error.out | tee  $@
 
 %.error.out: qtl/%.h
-	$(CXX) $(CXXFLAGS) -o $@  -DERROR_INJECT=$(ERROR_LEVEL) -fsanitize=address  -fdiagnostics-color=always -DTEST_H='"'$<'"' test.cpp  2>&1 | tee ./$(*F).error.make.${CXX}.log
+	$(CXX) $(CXXFLAGS) -o $@  -DERROR_INJECT=$(ERROR_LEVEL) -fdiagnostics-color=always -DTEST_H='"'$<'"' test.cpp  2>&1 | tee ./$(*F).error.make.${CXX}.log
 
 %.fuzz: %.fuzz.out $(FDIR)/%.cmin $(FDIR)/%.dict
 	$(FENV) $(FUZZ) $(FFLAGS) -i $(FDIR)/$(*F).cmin -x $(FDIR)/$(*F).dict -o $(FDIR)/$(*F).out -- ./$(*F).fuzz.out
 
-%.fuzz.log: %.fuzz.out $(FDIR)/%.in 
+%.fuzz.log: %.fuzz.out $(FDIR)/%.in
 	$(FUZZ) -i $(FDIR)/$(*F).in -o $(FDIR)/$(*F).out -- ./$(*F).fuzz.out 2>&1 | tee  $@
 
-$(FDIR)/%.cmin: 
+$(FDIR)/%.cmin:
 	mkdir -pv $(FDIR)/$(*F).cmin/ && /usr/local/bin/afl/afl-cmin -i $(FDIR)/$(*F).in/  -o  $(FDIR)/$(*F).cmin/ -- ./$(*F).fuzz.out
 
 $(FDIR)/%.in/aa: %.test.out
 	mkdir -pv $(FDIR)/$(*F).in/ && ./$(*F).test.out fuzz | $(SPLIT) $(FDIR)/$(*F).in/
 
 $(FDIR)/%.dict: %.fuzz.out
-	./$(*F).fuzz.out dict > $(FDIR)/$(*F).dict; 
+	./$(*F).fuzz.out dict > $(FDIR)/$(*F).dict;
 
 $(FDIR)/%.in: %.fuzz.out
 	mkdir -pv $(FDIR)/$(*F).in/ ;  ./$(*F).fuzz.out fuzz | $(SPLIT) $(FDIR)/$(*F).in/
 
 %.fuzz.out: qtl/%.h qtl/out.h qtl/string.h
-#	$(FXX) -DFUZZING -D'TRACE(x)=' -o $@ -g3  $(CXXFLAGS)  -DTEST_H='"'$<'"' -fsanitize=address  -fdiagnostics-color=always test.cpp 2>&1 | tee ./$(*F).fuzz.make.log
 	AFL_HARDEN=1 $(FXX) -DFUZZING -D'TRACE(x)=' -o $@ -g3  $(CXXFLAGS)  -DTEST_H='"'$<'"' -fdiagnostics-color=always test.cpp 2>&1 | tee ./$(*F).fuzz.make.log
-
 
 errors: out.error
 
@@ -102,9 +75,6 @@ test: cleanlog tests
 
 %.debug: qtl/%.h
 	 $(CXX) -glldb $(CXXFLAGS) -D__TEST='"'$<'"' test.cpp && gdb a.out
-
-#all: qtl/*.h
-#	bash -cvx 'for f in qtl/*.hpp ; do  g++ --std=c++17 -D__TEST='"'"'"'"'"'$$f'"'"'"'"'"' test.cpp && ./a.out ; done'
 
 cleanlog:
 	rm -f *.{test,error}.log

@@ -1,0 +1,29 @@
+Homebrew clang version 19.1.6
+Target: arm64-apple-darwin24.6.0
+Thread model: posix
+InstalledDir: /opt/homebrew/Cellar/llvm/19.1.6/bin
+Configuration file: /opt/homebrew/etc/clang/arm64-apple-darwin24.cfg
+System configuration file directory: /opt/homebrew/etc/clang
+User configuration file directory: /Users/dmi/.config/clang
+ "/opt/homebrew/Cellar/llvm/19.1.6/bin/clang-19" -cc1 -triple arm64-apple-macosx15.0.0 -Wundef-prefix=TARGET_OS_ -Werror=undef-prefix -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -emit-obj -dumpdir out.test.out- -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name test.cpp -mrelocation-model pic -pic-level 2 -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -funwind-tables=1 -fcompatibility-qualified-id-block-type-checking -fvisibility-inlines-hidden-static-local-var -fbuiltin-headers-in-system-modules -fdefine-target-os-macros -target-cpu apple-m1 -target-feature +zcm -target-feature +zcz -target-feature +v8.4a -target-feature +aes -target-feature +altnzcv -target-feature +ccdp -target-feature +complxnum -target-feature +crc -target-feature +dotprod -target-feature +fp-armv8 -target-feature +fp16fml -target-feature +fptoint -target-feature +fullfp16 -target-feature +jsconv -target-feature +lse -target-feature +neon -target-feature +pauth -target-feature +perfmon -target-feature +predres -target-feature +ras -target-feature +rcpc -target-feature +rdm -target-feature +sb -target-feature +sha2 -target-feature +sha3 -target-feature +specrestrict -target-feature +ssbs -target-abi darwinpcs -debug-info-kind=standalone -dwarf-version=5 -debugger-tuning=lldb -debug-info-macro -fdebug-compilation-dir=/Users/dmi/tmp/dtree_test -target-linker-version 1115.7.3 -v -v -fcoverage-compilation-dir=/Users/dmi/tmp/dtree_test -resource-dir /opt/homebrew/Cellar/llvm/19.1.6/lib/clang/19 -I /opt/homebrew/include -D "TEST_H=\"qtl/out.h\"" -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk -cxx-isystem /usr/local/opt/boost -cxx-isystem /usr/local/opt/llvm/include -cxx-isystem /usr/include/c++/v1 -cxx-isystem /usr/local/include -cxx-isystem /usr/include -internal-isystem /opt/homebrew/Cellar/llvm/19.1.6/bin/../include/c++/v1 -internal-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/usr/local/include -internal-isystem /opt/homebrew/Cellar/llvm/19.1.6/lib/clang/19/include -internal-externc-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/usr/include --std=c++20 -fdeprecated-macro -ferror-limit 19 -fdiagnostics-show-template-tree -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fno-implicit-modules -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -fmax-type-align=16 -fcolor-diagnostics -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o /var/folders/z1/wkpcp2dj2ndg0tv7x8rn2v_40000gp/T/test-4fab49.o -x c++ test.cpp
+clang -cc1 version 19.1.6 based upon LLVM 19.1.6 default target arm64-apple-darwin24.6.0
+ignoring nonexistent directory "/usr/local/opt/boost"
+ignoring nonexistent directory "/usr/local/opt/llvm/include"
+ignoring nonexistent directory "/usr/include/c++/v1"
+ignoring nonexistent directory "/usr/include"
+ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/usr/local/include"
+ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/Library/Frameworks"
+#include "..." search starts here:
+#include <...> search starts here:
+ /opt/homebrew/include
+ /usr/local/include
+ /opt/homebrew/Cellar/llvm/19.1.6/bin/../include/c++/v1
+ /opt/homebrew/Cellar/llvm/19.1.6/lib/clang/19/include
+ /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/usr/include
+ /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/System/Library/Frameworks (framework directory)
+End of search list.
+In file included from test.cpp:16:
+[1m./qtl/out.h:1057:67: [0m[0;1;31merror: [0m[1munexpected ';' before ')'[0m
+ 1057 |     TRACE(  std::cout <<  qtl::type_name<[0;34mdecltype[0m(*obj)>() << [0;32m'\n'[0m; )[0m
+      | [0;1;32m                                                                  ^
+[0m1 error generated.
