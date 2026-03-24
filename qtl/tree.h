@@ -13,10 +13,6 @@
 namespace qtl{
   enum class op{
 #define X(n,a,o,f,p) n,
-    //#define debug_logical_and 
-#ifdef  debug_logical_and
-    X(logical_and,2,&&,left_,logical_and)
-#endif
     OP_TABLE
 #undef X
 }; // end class op
@@ -50,7 +46,7 @@ class lazyvec{
    lazyvec(const V<P>&v):v(v){}
    lazyvec(const V<P>&v,std::function<A(const P&)>f):v(v),f(f){}
    //it operator[](int i)const{ return it(*this,&v[i]); }
-  A operator[](int i)const{ return p(v[i]); }
+   A operator[](int i)const{ return p(v[i]); }
    const_iterator begin()const{ return const_iterator(*this,v.begin()); }
    const_iterator end()const{ return const_iterator(*this,v.end()); }
    size_t size()const{ return v.size(); }
@@ -168,7 +164,6 @@ class vec{
 #endif
     //using C::C;
     tree(){};
-#if 1
     tree(const C &c,const std::vector<tree> &b={}):C(c),branches(b){
 	NOTRACE( std::cerr << __PRETTY_FUNCTION__ << "(" << c << ", ";
 	       std::cerr << "{" ;
@@ -178,12 +173,7 @@ class vec{
 	       std::cerr << "}" ;
 	       std::cerr << ")" << '\n'; )
       }
-#endif
-#if 0
-    tree(const C &c):C(c),branches({}){
-      TRACE( std::cerr << __PRETTY_FUNCTION__ << "(" << c << ")\n"; )
-      }
-#endif
+
 friend std::ostream& operator<<(std::ostream& os, const tree &o){
    qtl::ios_base::fmtflags f;
    os >> f;  
@@ -220,7 +210,7 @@ class operation{
     int precedence;
     public:
      ps(const std::string &s,int p):std::string(s),precedence(p){}
-     ps(const std::string &s,const operation &o):std::string(s),precedence(optable[o.op].precedence){}
+     ps(const std::string &s,const operation &o):std::string(s),precedence(optable[o.o].precedence){}
   };
     struct methods{
       operand_t(*eval)(/**/const operation &t,/**/const lazyvec<operand_t>&,const symbol_table &,const /**/V1/**/ /*std::vector<V>*/&);
@@ -265,34 +255,27 @@ class operation{
 
   template<typename... S_>
   operand_t eval(const std::vector<operand_t> &v,const S_&... s_)const{
-        if( !cachevalue || !v.empty() ){
-	  // if( o == op::greater ){
-           TRACE( std::cout << __PRETTY_FUNCTION__ << '\n'; )
-           TRACE( std::cout << "optable.at(" << (int)o << ").eval)(" << *this << "," << v << ",s_...)" << '\n'; )
-	     //}
+	if( !cachevalue ){
+	  if( o == op::greater ){
+           NOTRACE( std::cout << __PRETTY_FUNCTION__ << '\n'; )
+           NOTRACE( std::cout << "optable.at(" << (int)o << ").eval)(" << *this << "," << v << ",s_...)" << 'n'; )
+	  }
 	  if( auto t=(*optable.at(o).eval)(*this,v,s_...); t.is_null() ){
-	    TRACE( std::cout << "= null" << n << '\n'; )
 	     return t;
           }else{
-	    TRACE( std::cout << "=" << t << '\n'; )
+	    NOTRACE( std::cout << "=" << t << '\n'; )
 	    //cachevalue=t;
 	    NOTRACE( std::cout << __LINE__ << '\n'; )
 	    return t;
           }
         }else{
           NOTRACE( std::cout << __PRETTY_FUNCTION__ << '\n'; )
-	  TRACE( std::cerr << "cachevalue=" << *cachevalue << '\n'; )
+	  NOTRACE( std::cerr << "cachevalue=" << *cachevalue << '\n'; )
           return *cachevalue;
         }
   }
 
-  class ob:public operation{
-    public:
-    bool b=false;
-  ob(const operation &o,bool b=false):operation(o),b(b){}
-    operator operation()const{ return (operation)*this; }
-    operator bool()const{ return this->b; }
-  }; // end class ob;
+  // Note: ob moved outside class to avoid incomplete type issue in C++17
 #if 0
   ob bind(const std::vector<ob>&o,const std::map<std::string,operation>&b){
     if( auto t=(o==op::name&&identifier?b.at(o):b.end())!=b.end() ){
@@ -349,7 +332,7 @@ operand_t  make_interval(const operand_t &a, const operand_t &b){
 #endif
 #if 0
 #define X0(n,o)  T(n,o,					      \
-  NOTRACE( std::cout << __PRETTY_FUNCTION__  << std::endl; ); \
+  NORACE( std::cout << __PRETTY_FUNCTION__  << std::endl; ); \
 		   if( !t.cachevalue ){				      \
 		       NOTRACE( std::cerr << "!t.cachevalue" << '\n'; ) \
 		     if( op::n==op::name ){    \
@@ -372,30 +355,9 @@ operand_t  make_interval(const operand_t &a, const operand_t &b){
                    return *t.cachevalue; \
  )
 #endif
-#ifdef debug_logical_and
-  template<typename V0=std::vector<operand_t>, typename V2=std::vector<operand_t>> 
- static inline operand_t eval_logical_and(const operation &t,const V0 &v,const symbol_table &syms={},const V2 /*std::vector<operand_t>*/ &cols={}){ 
-    TRACE( std::cerr << __PRETTY_FUNCTION__  << "(" <<  v[0] << "," << v[1] << ")" << std::endl; )
-  using namespace std;
-    TRACE( std::cerr << (operand_t)(v[0]) << "&&" <<  (operand_t)(v[1]) << "\n"; )
-      TRACE( std::cerr << ((operand_t)(v[0]) && (operand_t)(v[1])) << "\n"; )
-      TRACE(
-	 auto r= (operand_t)(v[0]) && (operand_t)(v[1]); 
-	 std::cerr << r << "\n"; 
-	 std::cerr << (operand_t)r << "\n";
-	    )
- return ((operand_t)(v[0]) && (operand_t)(v[1])); 
-}
-#endif
 #define X1(n,o)  T(n,o, return operation::n((operand_t)(v[0])); )
 #define X01(n,o) T(n,o, return std::n<operand_t>()((operand_t)(v[0])); )
-#define X2(n,o)  T(n,o, using namespace std; \
-       TRACE( std::cerr << __PRETTY_FUNCTION__  << "\n"; ) \
-       TRACE( auto a= ((operand_t)(v[0]) o (operand_t)(v[1])); ) \
-       TRACE( std::cerr << "=" << a << "\n"; ) \
-       TRACE( std::cerr << "(operand_t)" << (operand_t)a << "\n"; ) \
-       return ((operand_t)(v[0]) o (operand_t)(v[1])); \
-       )
+#define X2(n,o)  T(n,o, using namespace std; return ((operand_t)(v[0]) o (operand_t)(v[1])); )
 #define X02(n,o) T(n,o, NOTRACE( std::cerr << __PRETTY_FUNCTION__  << " X02\n"; ) return n()((operand_t)(v[0]),(operand_t)(v[1])); )
 #define X002(n,o)  T(n,o, NOTRACE( std::cerr << __PRETTY_FUNCTION__  << " X002\n"; )  \
   /*return operation::nary((V)n ## _identity,&std::n<operand_t>::operator(),v ); */ \
@@ -469,25 +431,13 @@ inline static const std::map<std::string,std::function<operand_t(const std::vect
 	    }
 	  }
           return operand_t(std::string(s.str()));
-	 }},
-       {"PRINT",[](const std::vector<operand_t> &v){
-	   int i=0;
-	   auto sep="";
-	   qtl::cout << "{ ";
-	   for( auto x:v ){
-	     qtl::cout << sep;
-	     qtl::cout << x;
-	     sep = ", ";
-	   }
-	   qtl::cout << "}\n";
-	   return kleen::T;
-	}},
+       }}
 };
 
 #define Xfunc(n,o) T(n,o,					      \
 		   if( !t.cachevalue ){ \
                        if( auto p=functab.find(*t.identifier); p!=functab.end() ){ \
-			 return (p->second)(v);	\
+			 t.cachevalue = (p->second)(v);	\
                        }else{ \
                          std::cerr << "unknown function " << *t.identifier << "()\n";  \
 		         return V(nullptr); \
@@ -509,7 +459,7 @@ inline static const std::map<std::string,std::function<operand_t(const std::vect
     if( first ){ \
       first=false; \
     }else{ \
-      ret = ret && x;		\
+      ret = (operand_t)std::n<V>()(ret,x);		\
     } \
   } \
   return ret; \
@@ -749,9 +699,6 @@ inline static const std::vector<methods> tmp={
 	  }
       },
 #else
-#ifdef debug_logical_and
-X(logical_and,2,&&,left_,logical_and)
-#endif
       OP_TABLE
 #endif
 #undef X
@@ -842,45 +789,72 @@ friend std::ostream& operator<<(std::ostream& os, const operation &op){
 
  }; // end class operation
 
+// ob class moved outside operation to avoid incomplete type issue in C++17
+template<class V=qtl::interval, class V1=intvec<lex::scalar>>
+class ob:public operation<V,V1>{
+  public:
+  using base_t = operation<V,V1>;
+  bool b=false;
+  ob(const operation<V,V1> &o,bool b=false):base_t(o),b(b){}
+  operator operation<V,V1>()const{ return (operation<V,V1>)*this; }
+  operator bool()const{ return this->b; }
+}; // end class ob;
+
+// Forward declaration for ob_expr
+template<typename V, typename V1> class ob_expr;
+
 template<typename V=qtl::interval,typename V1=/*std::vector<V>*/intvec<lex::scalar>>
 #define BASE_T tree<operation<V,V1>>
 class optree:public BASE_T{
- using optree_base_t=BASE_T;
+ using base_t=BASE_T;
 #undef BASE_T
  using OP=operation<V,V1>;
  public:
- // Initializer list constructor for {l,r} syntax
- optree(enum op o,std::initializer_list<optree> vo):optree_base_t(OP(o)){
-   for( auto& i:vo ){
-     this->branches.push_back(i);
+ // using value_type=optree;
+ using base_t::base_t;
+ // optree(const base_t &o):base_t(o){}
+ // optree(const OP &o):base_t(o){}
+ optree(const OP &o,const std::vector<optree> &vo={}):base_t(o){
+   for( auto i:vo ){
+     this->branches.push_back(static_cast<const base_t&>(i));
    }
  }
- optree( const V &v ):optree( op::lit, v){}
+ optree(enum op o,const std::vector<optree> &vo={}):base_t(OP(o)){
+   for( auto i:vo ){
+     this->branches.push_back(static_cast<const base_t&>(i));
+   }
+ }
+// optree(enum op o,const V &v):base_t(OP(o,v)){}
+#if 0
+ optree(enum op o,const std::string &id,const std::vector<optree> &vo={}):base_t(OP(o,id)){
+   for( auto i:vo ){
+     this->branches.push_back(static_cast<const base_t&>(i));
+   }
+ }
+#endif
+ optree(enum op o,const V &v,const std::vector<optree> &vo/*={}*/):base_t(OP(o,v)){
+   for( auto i:vo ){
+     this->branches.push_back(static_cast<const base_t&>(i));
+   }
+ }
  std::string stringify()const{
    return this->template recurse<struct OP::ps>(&OP::stringify);
   }
 #if 0
  // V eval(const typename OP::symbol_table &syms={},const std::vector<V> &cols={})const{
- //   return this->template recurse<V,const typename OP::symbol_table &,const std::vector<V> &>(&OP::eval,syms,cols);
+ //   return base_t::template recurse<V,const typename OP::symbol_table &,const std::vector<V> &>(&OP::eval,syms,cols);
  //  }
 #else
  // template<typename Vec=std::vector<V>,V1=std::vector<V>>
  // V eval(const typename OP::symbol_table &syms={},const V1 &cols={})const{
- //   return this->template recurse<V,const typename OP::symbol_table &,const Vec &>(&OP::eval,syms,cols);
+ //   return base_t::template recurse<V,const typename OP::symbol_table &,const Vec &>(&OP::eval,syms,cols);
  // }
  // template<typename V1=std::vector<V>>
  V eval(const typename OP::symbol_table &syms={},const V1 &cols={})const{
    return this->template recurse<V,const typename OP::symbol_table &,const V1 &>(&OP::eval,syms,cols);
  }
 #endif
- class ob:public optree{
-    bool b=false;
- public:
-    ob(const optree &o,bool b=false):optree(o),b(b){}
-    operator optree()const{ return (optree)*this; }
-    operator bool()const{ return this->b; }
- }; // end class ob;
- ob bind(const std::map<std::string,optree>&s){
+ ob_expr<V,V1> bind(const std::map<std::string,optree>&s){
    NOTRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; )
    if( auto p=(this->o==qtl::op::name &&this->identifier?s.find(*this->identifier):s.end()); p!= s.end() ){
      return {p->second,true};
@@ -894,7 +868,7 @@ class optree:public BASE_T{
        NOTRACE( std::cerr << "base_t(x)" << base_t(x) << '\n'; )
        auto y=(optree((base_t)x,x.branches)).bind(s);
      NOTRACE( std::cerr << "y=" << y << '\n'; )
-       b = (b||(bool)y);
+     b = (b||y);
      v.push_back(y);
    }
    if( !b ){ return {*this,b}; }
@@ -908,7 +882,7 @@ class optree:public BASE_T{
    #undef BASE_T
    using base_t::base_t;
  }; // end class optree::hints
- hints hints(){
+ hints hints()const{
    class hints ret;
    auto set=[&ret,this](sign s){
     using b_t=typename V::b_t;
@@ -926,14 +900,14 @@ class optree:public BASE_T{
 	 ret[i].insert(this->branches[0].cachevalue->l());
 	 ret[i].insert(this->branches[0].cachevalue->u());
         }else{
-         ret[i].insert({this->branches[0].cachevalue->l().value(),-s}); 
+         ret[i].insert({this->branches[0].cachevalue->l().value(),-s});
        }
      }
    };
    switch( this->o ){
    case qtl::op::equal_to: case qtl::op::not_equal_to: { set(sign(0)); }; break;
-   case qtl::op::less: case qtl::op::greater_equal:{ set(sign(-1)); }; break;     
-   case qtl::op::greater: case qtl::op::less_equal:{ set(sign(1)); }; break;     
+   case qtl::op::less: case qtl::op::greater_equal:{ set(sign(-1)); }; break;
+   case qtl::op::greater: case qtl::op::less_equal:{ set(sign(1)); }; break;
    case qtl::op::logical_not: case qtl::op::logical_and: case qtl::op::logical_or: {
       for( auto const &x:this->branches ){
 	for( auto const &h:(optree((base_t)x,x.branches)).hints() ){
@@ -946,6 +920,17 @@ class optree:public BASE_T{
    return ret;
  }
 };//end class optree
+
+// ob_expr class for optree - defined outside to avoid incomplete type
+template<typename V=qtl::interval,typename V1=intvec<lex::scalar>>
+class ob_expr:public optree<V,V1>{
+   bool b=false;
+   using base_t = optree<V,V1>;
+ public:
+    ob_expr(const optree<V,V1> &o,bool b=false):base_t(o),b(b){}
+    operator optree<V,V1>()const{ return (optree<V,V1>)*this; }
+    operator bool()const{ return this->b; }
+}; // end class ob_expr
 
  using expr=optree<qtl::interval,intvec<lex::scalar>>;
 
@@ -971,17 +956,8 @@ template<typename V=qtl::interval,typename V1=std::vector<V>>
 	     std::cerr << (*this).value();
 	   }
      )
-       #if 0
        NOTRACE( std::cerr << (*this).value().stringify() << '=' << (*this).value().eval({},v) << '\n'; )
-       #else
-       auto e=(*this).value().eval({},v);
-     TRACE( std::cerr << (*this).value().stringify() << '=' << e << "\n"; )
-       kleen k=e;
-     TRACE( std::cerr << "(kleen)" << k << "\n"; )
-       return k;
-       #endif
        return (*this).value().eval({},v);
-     
    }  
  }; // end class optexpr
 #if 1
@@ -989,100 +965,21 @@ template<typename V=qtl::interval,typename V1=std::vector<V>>
  qtl::expr operator o(const qtl::expr &l,const qtl::expr &r){	\
    return qtl::expr(qtl::op::p,{l,r}); \
  } \
- /* template<class R>  qtl::expr operator o(const qtl::expr &l,const R &r){ return qtl::expr(qtl::op::p,{l,qtl::expr(r)}); } */  \
-template<class L>  qtl::expr operator o(const L &l,const qtl::expr &r){ return qtl::expr(qtl::op::p,{qtl::expr(l),r}); } \
  // end define
    X(*,multiplies)
    X(/,divides)
    X(+,plus)
    X(-,minus)
-#ifdef debug_logical_and__
- qtl::expr operator &&(const qtl::expr &l,const qtl::expr &r){ 
-     TRACE( std::cout << __PRETTY_FUNCTION__ << "(" << l << "," << r << ")" << "\n"; )
-   return qtl::expr(qtl::op::logical_and,{l,r}); 
- } 
-template<class L>  qtl::expr operator &&(const L &l,const qtl::expr &r){
-   TRACE( std::cout << __PRETTY_FUNCTION__ << "(" << l << "," << r << ")" << "\n"; )
-  return qtl::expr(qtl::op::logical_and,{qtl::expr(l),r});
-} 
-#else
-   X(&&,logical_and)
-#endif
-   X(||,logical_or)
-#undef X
-   qtl::expr et( const qtl::tree<qtl::operation<qtl::basic_interval<lex::scalar, void>, qtl::intvec<lex::scalar>>> & t){
-     TRACE( std::cout << __PRETTY_FUNCTION__ << "(" << t << ")" << "\n"; )
-       TRACE( std::cout << t.branches.size() << "\n"; )
-     qtl::expr e=t;
-     TRACE( std::cout << e.branches.size()  << "\n"; )
-     TRACE( std::cout << e  << "\n"; )
-       return e;
-   }
-// Helper to get base class reference
-using expr_base_t = tree<operation<qtl::interval,intvec<lex::scalar>>>;
-using expr_op_t = operation<qtl::interval,intvec<lex::scalar>>;
-inline const expr_base_t& get_base(const qtl::expr& e) {
-  return static_cast<const expr_base_t&>(e);
-}
-// Overload for tree type - explicit version
-inline const expr_base_t& get_base_tree(const expr_base_t& t) {
-  return t;
-}
-// Helper to construct expr from tree base
-inline qtl::expr make_expr(const expr_base_t& t) {
-  qtl::expr e(qtl::op::lit,qtl::interval(0));
-  static_cast<qtl::expr::optree_base_t&>(e) = t;
-  return e;
-}
-#define X(O,p) \
-qtl::expr operator O(const qtl::expr &l,const qtl::expr &r){	\
- const expr_base_t& lb = get_base(l); \
- switch( static_cast<int>(lb.o) ){ \
-   case static_cast<int>(qtl::op::logical_and): {\
-     TRACE( std::cout << __PRETTY_FUNCTION__ << "\n"; ) 	\
-       TRACE( std::cout << l << "\n"; ) \
-       TRACE(  std::cout << l.stringify() << "\n"; )	\
-   const expr_base_t& lb1 = get_base_tree(lb.branches[1]); \
-   switch( static_cast<int>(lb1.o) ){ \
-    case static_cast<int>(qtl::op::less): case static_cast<int>(qtl::op::less_equal): case static_cast<int>(qtl::op::not_equal_to):  case static_cast<int>(qtl::op::equal_to): case static_cast<int>(qtl::op::greater_equal): case static_cast<int>(qtl::op::greater): { \
-     NOTRACE( std::cout << lb1 << "\n"; ) \
-     NOTRACE( std::cout << r << "\n"; ) \
-       NOTRACE( std::cout << lb1.branches.size() << "\n"; )	\
-      NOTRACE( std::cout << qtl::type_name<decltype( lb1 )>() << "\n" ; ) \
-       qtl::expr l1 = make_expr(lb1); \
-       NOTRACE( std::cout << l1.branches.size() << "\n"; )	\
-       NOTRACE( std::cout << l1 << "\n"; )	\
-      NOTRACE( std::cout << qtl::type_name<decltype( l1 )>() << "\n" ; ) \
-     NOTRACE( std::cout << operator O ( lb1,r ) << "\n"; )	\
-     return qtl::expr(qtl::op::logical_and, {l, operator O ( lb1,r ) }); \
-    };break; \
-      default: { return qtl::expr(qtl::op::p,{l,r}); }	\
-   };\
-      return qtl::expr(qtl::op::p,{l,r}); \
-   };break;								\
- case static_cast<int>(qtl::op::less): case static_cast<int>(qtl::op::less_equal): case static_cast<int>(qtl::op::not_equal_to):  case static_cast<int>(qtl::op::equal_to): case static_cast<int>(qtl::op::greater_equal): case static_cast<int>(qtl::op::greater): { \
-   NOTRACE( std::cout << __PRETTY_FUNCTION__ << "\n"; )			\
-     NOTRACE( std::cout << lb.branches.size() << "\n";)			\
-     NOTRACE( std::cout << l << "\n";) \
-     NOTRACE( std::cout << l.stringify() << "\n"; ) \
-     const expr_base_t& lb1 = get_base_tree(lb.branches[1]); \
-     NOTRACE( std::cout << qtl::type_name<decltype(lb1)>() << "\n"; )	\
-   return qtl::expr(qtl::op::logical_and,{l,qtl::expr(qtl::op::p,{make_expr(lb1),r})}); \
- };break;								\
-    default: { return qtl::expr(qtl::op::p,{l,r}); }	\
-	    };						\
-}							\
-
-// end define
    X(<,less)
    X(<=,less_equal)
    X(!=,not_equal_to)
    X(==,equal_to)
    X(>=,greater_equal)
    X(>,greater)
+   X(&&,logical_and)
+   X(||,logical_or)
 #undef X
 #endif
-
    //   double operator~(const operation<double>&x){
    //     return !x;
    //  }
@@ -1093,7 +990,7 @@ qtl::expr operator O(const qtl::expr &l,const qtl::expr &r){	\
      expr operator""_name(const char *c){
        return expr(qtl::op::name,std::string(c));
      }
-     expr operator""_col(unsigned long long int i){
+     expr operator""_column(unsigned long long int i){
         std::stringstream s;
 	s << i;
         return expr(qtl::op::column,s.str());
@@ -1101,8 +998,7 @@ qtl::expr operator O(const qtl::expr &l,const qtl::expr &r){	\
    }
 }
 #if __INCLUDE_LEVEL__ + !defined __INCLUDE_LEVEL__ < 1+defined TEST_H
-  //#include "interval.h"
-  //using qtl::expr=optree<qtl::interval,intvec<lex::string>>;
+using qtl::expr=optree<qtl::interval,intvec<lex::string>>;
 qtl::expr e5(qtl::operation(qtl::op::lit,qtl::interval(5)));
 qtl::expr e2(qtl::operation(qtl::op::lit,qtl::interval(2)));
 qtl::expr e2p5(qtl::op::plus,{e5,e2});
@@ -1122,23 +1018,14 @@ int main(){
     std::cout << (long)e << std::endl;
     std::cout << e.re()  << std::endl;
 #else
-#if 0
-    ./qtl/container.h:520:2: error: multiple overloads of 'tuple' instantiate to the same signature 'void ()'
- tuple(const T&... t/*,std::enable_if_t<sizeof...(t)!=0,int>=0*/):base_t( (... + string(t,eof(T::depth)) ) ),cache({t...}){
- ^
-./qtl/tree.h:1150:32: note: in instantiation of template class 'lex::tuple<>' requested here
 std::cout << e2.stringify() << std::endl;
-                               ^
-#else
-std::cout << e2.stringify() << "\n";
-#endif
 exit(0);
- std::cout << e.eval() << "\n";
-std::cout << e.stringify() << "\n";
+std::cout << e.eval() << std::endl;
+std::cout << e.stringify() << std::endl;
 #endif
 
     //    std::cout << operator+(1,2) << std::endl;
-          std::cout << std::operator+(std::string("a"),std::string("b")) << "\n";
+          std::cout << std::operator+(std::string("a"),std::string("b")) << std::endl;
 
 	  //          std::cout << std::operator+(1.2,2.3) << std::endl;
 	  //	  std::cout << (1).std::operator+(2) << std::endl;
