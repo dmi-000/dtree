@@ -1,0 +1,126 @@
+In file included from test.cpp:16:
+In file included from ./qtl/sql.h:1:
+In file included from ./qtl/expr.h:1:
+In file included from ./qtl/interval.h:3:
+In file included from ./qtl/number.h:12:
+./qtl/string.h:580:2: warning: invalid preprocessing directive, did you mean '#elif'? [-Wunknown-directives]
+  580 | #elsif 0
+      |  ^~~~~
+      |  elif
+./qtl/string.h:586:2: warning: invalid preprocessing directive, did you mean '#elif'? [-Wunknown-directives]
+  586 | #elsif 0
+      |  ^~~~~
+      |  elif
+In file included from test.cpp:16:
+In file included from ./qtl/sql.h:1:
+In file included from ./qtl/expr.h:2:
+./qtl/tree.h:1011:2: warning: invalid preprocessing directive, did you mean '#elif'? [-Wunknown-directives]
+ 1011 | #elseif 0
+      |  ^~~~~~
+      |  elif
+In file included from test.cpp:16:
+In file included from ./qtl/sql.h:2:
+In file included from ./qtl/store.h:19:
+./qtl/radix_map.h:1585:36: error: no template named 'binary_function' in namespace 'std'; did you mean '__binary_function'?
+ 1585 |   struct key_compare : public std::binary_function<key_type, key_type, bool> {
+      |                               ~~~~~^~~~~~~~~~~~~~~
+      |                                    __binary_function
+/opt/homebrew/opt/llvm/include/c++/v1/__functional/binary_function.h:49:1: note: '__binary_function' declared here
+   49 | using __binary_function = __binary_function_keep_layout_base<_Arg1, _Arg2, _Result>;
+      | ^
+In file included from test.cpp:16:
+In file included from ./qtl/sql.h:2:
+In file included from ./qtl/store.h:19:
+./qtl/radix_map.h:1593:38: error: no template named 'binary_function' in namespace 'std'; did you mean '__binary_function'?
+ 1593 |   struct value_compare : public std::binary_function<value_type, value_type, bool> {
+      |                                 ~~~~~^~~~~~~~~~~~~~~
+      |                                      __binary_function
+/opt/homebrew/opt/llvm/include/c++/v1/__functional/binary_function.h:49:1: note: '__binary_function' declared here
+   49 | using __binary_function = __binary_function_keep_layout_base<_Arg1, _Arg2, _Result>;
+      | ^
+In file included from test.cpp:16:
+In file included from ./qtl/sql.h:2:
+In file included from ./qtl/store.h:19:
+./qtl/radix_map.h:2663:50: error: no template named 'binary_function' in namespace 'std'; did you mean '__binary_function'?
+ 2663 |   class record_offset_sort_by_id_t : public std::binary_function<offset, offset, bool> {
+      |                                             ~~~~~^~~~~~~~~~~~~~~
+      |                                                  __binary_function
+/opt/homebrew/opt/llvm/include/c++/v1/__functional/binary_function.h:49:1: note: '__binary_function' declared here
+   49 | using __binary_function = __binary_function_keep_layout_base<_Arg1, _Arg2, _Result>;
+      | ^
+In file included from test.cpp:16:
+In file included from ./qtl/sql.h:2:
+./qtl/store.h:2783:22: error: use of undeclared identifier 'cppcoro'
+ 2783 |    class lval:public BASE_T {
+      |                      ^
+./qtl/store.h:2782:18: note: expanded from macro 'BASE_T'
+ 2782 |   #define BASE_T cppcoro::recursive_generator<qtl::row>
+      |                  ^
+./qtl/store.h:2783:22: error: unknown template name 'recursive_generator'
+./qtl/store.h:2782:27: note: expanded from macro 'BASE_T'
+ 2782 |   #define BASE_T cppcoro::recursive_generator<qtl::row>
+      |                           ^
+./qtl/store.h:2784:21: error: use of undeclared identifier 'cppcoro'
+ 2784 |      using base_t = BASE_T;
+      |                     ^
+./qtl/store.h:2782:18: note: expanded from macro 'BASE_T'
+ 2782 |   #define BASE_T cppcoro::recursive_generator<qtl::row>
+      |                  ^
+./qtl/store.h:2794:64: error: use of undeclared identifier 'cppcoro'
+ 2794 |      /*static constexpr*/ auto co_search_leaf(const rows &r)-> cppcoro::recursive_generator<qtl::row>{
+      |                                                                ^
+./qtl/store.h:2807:54: error: use of undeclared identifier 'cppcoro'
+ 2807 |     /*static*/ auto co_search_vertex(const path &p)->cppcoro::recursive_generator<qtl::row>{
+      |                                                      ^
+./qtl/store.h:2954:20: error: use of undeclared identifier 'cppcoro'
+ 2954 |      std::optional<cppcoro::recursive_generator<qtl::row>>
+      |                    ^
+./qtl/store.h:2954:57: error: expected '(' for function-style cast or type construction
+ 2954 |      std::optional<cppcoro::recursive_generator<qtl::row>>
+      |                                                 ~~~~~~~~^
+./qtl/store.h:2957:38: error: use of undeclared identifier 'cppcoro'
+ 2957 |        using base_coro=std::optional<cppcoro::recursive_generator<qtl::row>>;
+      |                                      ^
+./qtl/store.h:2957:75: error: expected '(' for function-style cast or type construction
+ 2957 |        using base_coro=std::optional<cppcoro::recursive_generator<qtl::row>>;
+      |                                                                   ~~~~~~~~^
+./qtl/store.h:2957:77: error: expected ';' after alias declaration
+ 2957 |        using base_coro=std::optional<cppcoro::recursive_generator<qtl::row>>;
+      |                                                                             ^
+      |                                                                             ;
+./qtl/store.h:2958:28: error: use of undeclared identifier 'base_t'; did you mean 'sign::base_t'?
+ 2958 |        using base_iterator=base_t::iterator;
+      |                            ^~~~~~
+      |                            sign::base_t
+./qtl/interval.h:62:44: note: 'sign::base_t' declared here
+   62 |     typedef  enum {minus=-1,zero=0,plus=1} base_t;
+      |                                            ^
+In file included from test.cpp:16:
+In file included from ./qtl/sql.h:2:
+./qtl/store.h:2958:28: error: no type named 'iterator' in 'qtl::sign::base_t'; did you mean simply 'iterator'?
+ 2958 |        using base_iterator=base_t::iterator;
+      |                            ^~~~~~~~~~~~~~~~
+      |                            iterator
+./qtl/store.h:2950:12: note: 'iterator' declared here
+ 2950 |      class iterator:public
+      |            ^
+./qtl/store.h:2960:12: error: use of undeclared identifier 'base_coro'
+ 2960 |      using base_coro::base_coro;
+      |            ^
+./qtl/store.h:2962:8: error: unknown type name 'base_iterator'; did you mean 'const_iterator'?
+ 2962 |        base_iterator base_it;
+      |        ^~~~~~~~~~~~~
+      |        const_iterator
+./qtl/bool.h:73:28: note: 'const_iterator' declared here
+   73 |    typedef _iterator<true> const_iterator;
+      |                            ^
+In file included from test.cpp:16:
+In file included from ./qtl/sql.h:2:
+./qtl/store.h:3178:11: error: use of undeclared identifier 'cppcoro'
+ 3178 |   static  cppcoro::recursive_generator<qtl::row> search_vertex(const lattice &l,const path &p,const qtl::optexpr<qtl::basic_interval<lex::scalar, void>, qtl::intvec<>> &e){
+      |           ^
+./qtl/store.h:3203:10: error: use of undeclared identifier 'cppcoro'
+ 3203 |   static cppcoro::recursive_generator<qtl::row> search_leaf(const rows &r, const qtl::optexpr<qtl::basic_interval<lex::scalar, void>, qtl::intvec<>> &e){
+      |          ^
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+3 warnings and 20 errors generated.
