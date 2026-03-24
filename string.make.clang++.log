@@ -1,0 +1,79 @@
+Homebrew clang version 19.1.6
+Target: arm64-apple-darwin24.6.0
+Thread model: posix
+InstalledDir: /opt/homebrew/Cellar/llvm/19.1.6/bin
+Configuration file: /opt/homebrew/etc/clang/arm64-apple-darwin24.cfg
+System configuration file directory: /opt/homebrew/etc/clang
+User configuration file directory: /Users/dmi/.config/clang
+ "/opt/homebrew/Cellar/llvm/19.1.6/bin/clang-19" -cc1 -triple arm64-apple-macosx15.0.0 -Wundef-prefix=TARGET_OS_ -Werror=undef-prefix -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -emit-obj -dumpdir string.test.out- -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name test.cpp -mrelocation-model pic -pic-level 2 -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -funwind-tables=1 -fcompatibility-qualified-id-block-type-checking -fvisibility-inlines-hidden-static-local-var -fbuiltin-headers-in-system-modules -fdefine-target-os-macros -target-cpu apple-m1 -target-feature +zcm -target-feature +zcz -target-feature +v8.4a -target-feature +aes -target-feature +altnzcv -target-feature +ccdp -target-feature +complxnum -target-feature +crc -target-feature +dotprod -target-feature +fp-armv8 -target-feature +fp16fml -target-feature +fptoint -target-feature +fullfp16 -target-feature +jsconv -target-feature +lse -target-feature +neon -target-feature +pauth -target-feature +perfmon -target-feature +predres -target-feature +ras -target-feature +rcpc -target-feature +rdm -target-feature +sb -target-feature +sha2 -target-feature +sha3 -target-feature +specrestrict -target-feature +ssbs -target-abi darwinpcs -debug-info-kind=standalone -dwarf-version=5 -debugger-tuning=lldb -debug-info-macro -fdebug-compilation-dir=/Users/dmi/tmp/dtree_test -target-linker-version 1115.7.3 -v -v -fcoverage-compilation-dir=/Users/dmi/tmp/dtree_test -resource-dir /opt/homebrew/Cellar/llvm/19.1.6/lib/clang/19 -I /opt/homebrew/include -D "TEST_H=\"qtl/string.h\"" -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk -cxx-isystem /usr/local/opt/boost -cxx-isystem /usr/local/opt/llvm/include -cxx-isystem /usr/include/c++/v1 -cxx-isystem /usr/local/include -cxx-isystem /usr/include -internal-isystem /opt/homebrew/Cellar/llvm/19.1.6/bin/../include/c++/v1 -internal-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/usr/local/include -internal-isystem /opt/homebrew/Cellar/llvm/19.1.6/lib/clang/19/include -internal-externc-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/usr/include --std=c++20 -fdeprecated-macro -ferror-limit 19 -fdiagnostics-show-template-tree -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fno-implicit-modules -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -fmax-type-align=16 -fcolor-diagnostics -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o /var/folders/z1/wkpcp2dj2ndg0tv7x8rn2v_40000gp/T/test-d6edd7.o -x c++ test.cpp
+clang -cc1 version 19.1.6 based upon LLVM 19.1.6 default target arm64-apple-darwin24.6.0
+ignoring nonexistent directory "/usr/local/opt/boost"
+ignoring nonexistent directory "/usr/local/opt/llvm/include"
+ignoring nonexistent directory "/usr/include/c++/v1"
+ignoring nonexistent directory "/usr/include"
+ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/usr/local/include"
+ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/Library/Frameworks"
+#include "..." search starts here:
+#include <...> search starts here:
+ /opt/homebrew/include
+ /usr/local/include
+ /opt/homebrew/Cellar/llvm/19.1.6/bin/../include/c++/v1
+ /opt/homebrew/Cellar/llvm/19.1.6/lib/clang/19/include
+ /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/usr/include
+ /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/System/Library/Frameworks (framework directory)
+End of search list.
+In file included from test.cpp:16:
+[1m./qtl/string.h:580:2: [0m[0;1;35mwarning: [0m[1minvalid preprocessing directive, did you mean '#elif'? [-Wunknown-directives][0m
+  580 | #elsif [0;32m0[0m
+      | [0;1;32m ^~~~~
+[0m      | [0;32m elif
+[0m[1m./qtl/string.h:586:2: [0m[0;1;35mwarning: [0m[1minvalid preprocessing directive, did you mean '#elif'? [-Wunknown-directives][0m
+  586 | #elsif [0;32m0[0m
+      | [0;1;32m ^~~~~
+[0m      | [0;32m elif
+[0mPLEASE submit a bug report to https://github.com/Homebrew/homebrew-core/issues and include the crash backtrace, preprocessed source, and associated run script.
+Stack dump:
+0.	Program arguments: /opt/homebrew/Cellar/llvm/19.1.6/bin/clang-19 -cc1 -triple arm64-apple-macosx15.0.0 -Wundef-prefix=TARGET_OS_ -Werror=undef-prefix -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -emit-obj -dumpdir string.test.out- -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name test.cpp -mrelocation-model pic -pic-level 2 -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -funwind-tables=1 -fcompatibility-qualified-id-block-type-checking -fvisibility-inlines-hidden-static-local-var -fbuiltin-headers-in-system-modules -fdefine-target-os-macros -target-cpu apple-m1 -target-feature +zcm -target-feature +zcz -target-feature +v8.4a -target-feature +aes -target-feature +altnzcv -target-feature +ccdp -target-feature +complxnum -target-feature +crc -target-feature +dotprod -target-feature +fp-armv8 -target-feature +fp16fml -target-feature +fptoint -target-feature +fullfp16 -target-feature +jsconv -target-feature +lse -target-feature +neon -target-feature +pauth -target-feature +perfmon -target-feature +predres -target-feature +ras -target-feature +rcpc -target-feature +rdm -target-feature +sb -target-feature +sha2 -target-feature +sha3 -target-feature +specrestrict -target-feature +ssbs -target-abi darwinpcs -debug-info-kind=standalone -dwarf-version=5 -debugger-tuning=lldb -debug-info-macro -fdebug-compilation-dir=/Users/dmi/tmp/dtree_test -target-linker-version 1115.7.3 -v -v -fcoverage-compilation-dir=/Users/dmi/tmp/dtree_test -resource-dir /opt/homebrew/Cellar/llvm/19.1.6/lib/clang/19 -I /opt/homebrew/include -D TEST_H=\"qtl/string.h\" -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk -cxx-isystem /usr/local/opt/boost -cxx-isystem /usr/local/opt/llvm/include -cxx-isystem /usr/include/c++/v1 -cxx-isystem /usr/local/include -cxx-isystem /usr/include -internal-isystem /opt/homebrew/Cellar/llvm/19.1.6/bin/../include/c++/v1 -internal-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/usr/local/include -internal-isystem /opt/homebrew/Cellar/llvm/19.1.6/lib/clang/19/include -internal-externc-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk/usr/include --std=c++20 -fdeprecated-macro -ferror-limit 19 -fdiagnostics-show-template-tree -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fno-implicit-modules -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -fmax-type-align=16 -fcolor-diagnostics -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o /var/folders/z1/wkpcp2dj2ndg0tv7x8rn2v_40000gp/T/test-d6edd7.o -x c++ test.cpp
+1.	<eof> parser at end of file
+2.	Code generation
+ #0 0x0000000118d3d6fc llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) (/opt/homebrew/Cellar/llvm/19.1.6/lib/libLLVM.dylib+0x4a116fc)
+ #1 0x0000000118d3dae8 SignalHandler(int) (/opt/homebrew/Cellar/llvm/19.1.6/lib/libLLVM.dylib+0x4a11ae8)
+ #2 0x0000000193c7d6a4 (/usr/lib/system/libsystem_platform.dylib+0x1804ad6a4)
+ #3 0x00000001150c7644 llvm::AsmPrinter::emitDwarfSymbolReference(llvm::MCSymbol const*, bool) const (/opt/homebrew/Cellar/llvm/19.1.6/lib/libLLVM.dylib+0xd9b644)
+ #4 0x00000001150c7644 llvm::AsmPrinter::emitDwarfSymbolReference(llvm::MCSymbol const*, bool) const (/opt/homebrew/Cellar/llvm/19.1.6/lib/libLLVM.dylib+0xd9b644)
+ #5 0x00000001150fae70 llvm::DwarfDebug::emitDebugMacinfoImpl(llvm::MCSection*) (/opt/homebrew/Cellar/llvm/19.1.6/lib/libLLVM.dylib+0xdcee70)
+ #6 0x00000001150ee1a4 llvm::DwarfDebug::endModule() (/opt/homebrew/Cellar/llvm/19.1.6/lib/libLLVM.dylib+0xdc21a4)
+ #7 0x00000001150b95c4 llvm::AsmPrinter::doFinalization(llvm::Module&) (/opt/homebrew/Cellar/llvm/19.1.6/lib/libLLVM.dylib+0xd8d5c4)
+ #8 0x0000000114681e1c llvm::FPPassManager::doFinalization(llvm::Module&) (/opt/homebrew/Cellar/llvm/19.1.6/lib/libLLVM.dylib+0x355e1c)
+ #9 0x00000001146638b8 llvm::legacy::PassManagerImpl::run(llvm::Module&) (/opt/homebrew/Cellar/llvm/19.1.6/lib/libLLVM.dylib+0x3378b8)
+#10 0x00000001078372f0 clang::EmitBackendOutput(clang::DiagnosticsEngine&, clang::HeaderSearchOptions const&, clang::CodeGenOptions const&, clang::TargetOptions const&, clang::LangOptions const&, llvm::StringRef, llvm::Module*, clang::BackendAction, llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::__1::unique_ptr<llvm::raw_pwrite_stream, std::__1::default_delete<llvm::raw_pwrite_stream>>, clang::BackendConsumer*) (/opt/homebrew/Cellar/llvm/19.1.6/lib/libclang-cpp.dylib+0x17df2f0)
+#11 0x0000000107c03a38 clang::BackendConsumer::HandleTranslationUnit(clang::ASTContext&) (/opt/homebrew/Cellar/llvm/19.1.6/lib/libclang-cpp.dylib+0x1baba38)
+#12 0x000000010628f2fc clang::ParseAST(clang::Sema&, bool, bool) (/opt/homebrew/Cellar/llvm/19.1.6/lib/libclang-cpp.dylib+0x2372fc)
+#13 0x00000001083cd384 clang::FrontendAction::Execute() (/opt/homebrew/Cellar/llvm/19.1.6/lib/libclang-cpp.dylib+0x2375384)
+#14 0x0000000108343e0c clang::CompilerInstance::ExecuteAction(clang::FrontendAction&) (/opt/homebrew/Cellar/llvm/19.1.6/lib/libclang-cpp.dylib+0x22ebe0c)
+#15 0x0000000108426ea8 clang::ExecuteCompilerInvocation(clang::CompilerInstance*) (/opt/homebrew/Cellar/llvm/19.1.6/lib/libclang-cpp.dylib+0x23ceea8)
+#16 0x0000000100eaab3c cc1_main(llvm::ArrayRef<char const*>, char const*, void*) (/opt/homebrew/Cellar/llvm/19.1.6/bin/clang-19+0x100006b3c)
+#17 0x0000000100ea878c ExecuteCC1Tool(llvm::SmallVectorImpl<char const*>&, llvm::ToolContext const&) (/opt/homebrew/Cellar/llvm/19.1.6/bin/clang-19+0x10000478c)
+#18 0x0000000100ea6c18 clang_main(int, char**, llvm::ToolContext const&) (/opt/homebrew/Cellar/llvm/19.1.6/bin/clang-19+0x100002c18)
+#19 0x0000000100eb504c main (/opt/homebrew/Cellar/llvm/19.1.6/bin/clang-19+0x10001104c)
+#20 0x00000001938a2b98 
+clang++: [0;1;31merror: [0m[1munable to execute command: Segmentation fault: 11[0m
+clang++: [0;1;31merror: [0m[1mclang frontend command failed due to signal (use -v to see invocation)[0m
+Homebrew clang version 19.1.6
+Target: arm64-apple-darwin24.6.0
+Thread model: posix
+InstalledDir: /opt/homebrew/Cellar/llvm/19.1.6/bin
+Configuration file: /opt/homebrew/etc/clang/arm64-apple-darwin24.cfg
+clang++: [0;1;36mnote: [0mdiagnostic msg: 
+********************
+
+PLEASE ATTACH THE FOLLOWING FILES TO THE BUG REPORT:
+Preprocessed source(s) and associated run script(s) are located at:[0m
+clang++: [0;1;36mnote: [0mdiagnostic msg: /var/folders/z1/wkpcp2dj2ndg0tv7x8rn2v_40000gp/T/test-9ecc56.cpp[0m
+clang++: [0;1;36mnote: [0mdiagnostic msg: /var/folders/z1/wkpcp2dj2ndg0tv7x8rn2v_40000gp/T/test-9ecc56.sh[0m
+clang++: [0;1;36mnote: [0mdiagnostic msg: Crash backtrace is located in[0m
+clang++: [0;1;36mnote: [0mdiagnostic msg: /Users/dmi/Library/Logs/DiagnosticReports/clang-19_<YYYY-MM-DD-HHMMSS>_<hostname>.crash[0m
+clang++: [0;1;36mnote: [0mdiagnostic msg: (choose the .crash file that corresponds to your crash)[0m
+clang++: [0;1;36mnote: [0mdiagnostic msg: 
+
+********************[0m
