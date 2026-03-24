@@ -845,82 +845,32 @@ friend std::ostream& operator<<(std::ostream& os, const operation &op){
 template<typename V=qtl::interval,typename V1=/*std::vector<V>*/intvec<lex::scalar>>
 #define BASE_T tree<operation<V,V1>>
 class optree:public BASE_T{
- using base_t=BASE_T;
+ using optree_base_t=BASE_T;
 #undef BASE_T
  using OP=operation<V,V1>;
  public:
- // using value_type=optree;
- using base_t::base_t;
- // optree(const base_t &o):base_t(o){}
- // optree(const OP &o):base_t(o){}
-  /* no viable conversion from 'const qtl::tree<qtl::operation<qtl::basic_interval<lex::scalar, void>, qtl::intvec<lex::scalar>>>' to 'qtl::expr' (aka 'optree<basic_interval<lex::scalar>, intvec<lex::scalar>>') */
-  optree(const base_t &o):base_t(o){
-    NOTRACE( std::cerr << __PRETTY_FUNCTION__ << "(" << o << ")\n"; )
-    NOTRACE( std::cerr << "=" << *this <<  "\n"; )
-  }
-#if 0
-  optree(const optree &o){
-   TRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; )
-   TRACE( std::cerr << o << '\n'; )
-     *this=o;
-   TRACE( std::cerr << *this << '\n'; )
-    }
-#endif
-#if 0
-  /*
-./qtl/expr.h:243:15: error: no matching constructor for initialization of 'qtl::expr' (aka 'optree<basic_interval<lex::scalar>, intvec<lex::scalar>>')
-           _val(ctx)=qtl::expr(qtl::operation(qtl::op::function,at_c<0>(_attr(ctx))),*at_c<1>(_attr(ctx)));
-                     ^         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  */
-#else
- optree(const OP &o,const std::vector<optree> &vo={}):base_t(o){
-   std::vector<base_t> b;
-   for( auto i:vo ){
-     b.push_back(i);
+ // Initializer list constructor for {l,r} syntax
+ optree(enum op o,std::initializer_list<optree> vo):optree_base_t(OP(o)){
+   for( auto& i:vo ){
+     this->branches.push_back(i);
    }
-   base_t::branches=b;
- }
-#endif
- optree(enum op o,const std::vector<optree> &vo={}):base_t(OP(o)){
-   std::vector<base_t> b;
-   for( auto i:vo ){
-     b.push_back(i);
-   }
-   base_t::branches=b;
- }
-// optree(enum op o,const V &v):base_t(OP(o,v)){}
-#if 0
- optree(enum op o,const std::string &id,const std::vector<optree> &vo={}):base_t(OP(o,id)){
-   std::vector<base_t> b;
-   for( auto i:vo ){
-     b.push_back(i);
-   }
-   base_t::branches=b;
- }
-#endif
- optree(enum op o,const V &v,const std::vector<optree> &vo/*={}*/):base_t(OP(o,v)){
-   std::vector<base_t> b;
-   for( auto i:vo ){
-     b.push_back(i);
-   }
-   base_t::branches=b;
  }
  optree( const V &v ):optree( op::lit, v){}
  std::string stringify()const{
-   return base_t::template recurse<struct OP::ps>(&OP::stringify);
+   return this->template recurse<struct OP::ps>(&OP::stringify);
   }
 #if 0
  // V eval(const typename OP::symbol_table &syms={},const std::vector<V> &cols={})const{
- //   return base_t::template recurse<V,const typename OP::symbol_table &,const std::vector<V> &>(&OP::eval,syms,cols);
+ //   return this->template recurse<V,const typename OP::symbol_table &,const std::vector<V> &>(&OP::eval,syms,cols);
  //  }
 #else
  // template<typename Vec=std::vector<V>,V1=std::vector<V>>
  // V eval(const typename OP::symbol_table &syms={},const V1 &cols={})const{
- //   return base_t::template recurse<V,const typename OP::symbol_table &,const Vec &>(&OP::eval,syms,cols);
+ //   return this->template recurse<V,const typename OP::symbol_table &,const Vec &>(&OP::eval,syms,cols);
  // }
  // template<typename V1=std::vector<V>>
  V eval(const typename OP::symbol_table &syms={},const V1 &cols={})const{
-   return base_t::template recurse<V,const typename OP::symbol_table &,const V1 &>(&OP::eval,syms,cols);
+   return this->template recurse<V,const typename OP::symbol_table &,const V1 &>(&OP::eval,syms,cols);
  }
 #endif
  class ob:public optree{
@@ -932,13 +882,13 @@ class optree:public BASE_T{
  }; // end class ob;
  ob bind(const std::map<std::string,optree>&s){
    NOTRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; )
-   if( auto p=(base_t::o==qtl::op::name &&base_t::identifier?s.find(*base_t::identifier):s.end()); p!= s.end() ){
+   if( auto p=(this->o==qtl::op::name &&this->identifier?s.find(*this->identifier):s.end()); p!= s.end() ){
      return {p->second,true};
    }
    NOTRACE( std::cerr << *this << '\n'; )
    std::vector<base_t>v;
    bool b=false;
-   for( auto const &x:base_t::branches ){
+   for( auto const &x:this->branches ){
      NOTRACE( std::cerr << "x=" << x << '\n'; )
        NOTRACE( std::cerr << "(base_t)x=" << (base_t)x << '\n'; )
        NOTRACE( std::cerr << "base_t(x)" << base_t(x) << '\n'; )
@@ -962,30 +912,30 @@ class optree:public BASE_T{
    class hints ret;
    auto set=[&ret,this](sign s){
     using b_t=typename V::b_t;
-     if( base_t::branches[0].o==qtl::op::column && base_t::branches[1].cachevalue ){
-       auto i=std::stoul(*base_t::branches[0].identifier);
+     if( this->branches[0].o==qtl::op::column && this->branches[1].cachevalue ){
+       auto i=std::stoul(*this->branches[0].identifier);
        if( s==sign(0) ){
-	 ret[i].insert(base_t::branches[1].cachevalue->l());
-	 ret[i].insert(base_t::branches[1].cachevalue->u());
+	 ret[i].insert(this->branches[1].cachevalue->l());
+	 ret[i].insert(this->branches[1].cachevalue->u());
        }else{
-         ret[i].insert({base_t::branches[1].cachevalue->l().value(),s});
+         ret[i].insert({this->branches[1].cachevalue->l().value(),s});
        }
-     }else if(  base_t::branches[1].o==qtl::op::column && base_t::branches[0].cachevalue ){
-       auto i=std::stoul(*base_t::branches[1].identifier);
+     }else if(  this->branches[1].o==qtl::op::column && this->branches[0].cachevalue ){
+       auto i=std::stoul(*this->branches[1].identifier);
        if( s==sign(0) ){
-	 ret[i].insert(base_t::branches[0].cachevalue->l());
-	 ret[i].insert(base_t::branches[0].cachevalue->u());
+	 ret[i].insert(this->branches[0].cachevalue->l());
+	 ret[i].insert(this->branches[0].cachevalue->u());
         }else{
-         ret[i].insert({base_t::branches[0].cachevalue->l().value(),-s}); 
+         ret[i].insert({this->branches[0].cachevalue->l().value(),-s}); 
        }
      }
    };
-   switch( base_t::o ){
+   switch( this->o ){
    case qtl::op::equal_to: case qtl::op::not_equal_to: { set(sign(0)); }; break;
    case qtl::op::less: case qtl::op::greater_equal:{ set(sign(-1)); }; break;     
    case qtl::op::greater: case qtl::op::less_equal:{ set(sign(1)); }; break;     
    case qtl::op::logical_not: case qtl::op::logical_and: case qtl::op::logical_or: {
-      for( auto const &x:base_t::branches ){
+      for( auto const &x:this->branches ){
 	for( auto const &h:(optree((base_t)x,x.branches)).hints() ){
 	  ret[h.first].insert(h.second.begin(),h.second.end());
         }
@@ -1068,37 +1018,56 @@ template<class L>  qtl::expr operator &&(const L &l,const qtl::expr &r){
      TRACE( std::cout << e  << "\n"; )
        return e;
    }
+// Helper to get base class reference
+using expr_base_t = tree<operation<qtl::interval,intvec<lex::scalar>>>;
+using expr_op_t = operation<qtl::interval,intvec<lex::scalar>>;
+inline const expr_base_t& get_base(const qtl::expr& e) {
+  return static_cast<const expr_base_t&>(e);
+}
+// Overload for tree type - explicit version
+inline const expr_base_t& get_base_tree(const expr_base_t& t) {
+  return t;
+}
+// Helper to construct expr from tree base
+inline qtl::expr make_expr(const expr_base_t& t) {
+  qtl::expr e(qtl::op::lit,qtl::interval(0));
+  static_cast<qtl::expr::optree_base_t&>(e) = t;
+  return e;
+}
 #define X(O,p) \
 qtl::expr operator O(const qtl::expr &l,const qtl::expr &r){	\
- switch( l.o ){ \
-   case qtl::op::logical_and: {\
+ const expr_base_t& lb = get_base(l); \
+ switch( static_cast<int>(lb.o) ){ \
+   case static_cast<int>(qtl::op::logical_and): {\
      TRACE( std::cout << __PRETTY_FUNCTION__ << "\n"; ) 	\
        TRACE( std::cout << l << "\n"; ) \
        TRACE(  std::cout << l.stringify() << "\n"; )	\
-   switch( l.branches[1].o ){ \
-    case qtl::op::less: case qtl::op::less_equal: case qtl::op::not_equal_to:  case qtl::op::equal_to: case qtl::op::greater_equal: case qtl::op::greater: { \
-     NOTRACE( std::cout << l.branches[1] << "\n"; ) \
+   const expr_base_t& lb1 = get_base_tree(lb.branches[1]); \
+   switch( static_cast<int>(lb1.o) ){ \
+    case static_cast<int>(qtl::op::less): case static_cast<int>(qtl::op::less_equal): case static_cast<int>(qtl::op::not_equal_to):  case static_cast<int>(qtl::op::equal_to): case static_cast<int>(qtl::op::greater_equal): case static_cast<int>(qtl::op::greater): { \
+     NOTRACE( std::cout << lb1 << "\n"; ) \
      NOTRACE( std::cout << r << "\n"; ) \
-       NOTRACE( std::cout << l.branches[1].branches.size() << "\n"; )	\
-      NOTRACE( std::cout << qtl::type_name<decltype( l.branches[1] )>() << "\n" ; ) \
-       qtl::expr l1=et(l.branches[1]);					\
+       NOTRACE( std::cout << lb1.branches.size() << "\n"; )	\
+      NOTRACE( std::cout << qtl::type_name<decltype( lb1 )>() << "\n" ; ) \
+       qtl::expr l1 = make_expr(lb1); \
        NOTRACE( std::cout << l1.branches.size() << "\n"; )	\
        NOTRACE( std::cout << l1 << "\n"; )	\
       NOTRACE( std::cout << qtl::type_name<decltype( l1 )>() << "\n" ; ) \
-     NOTRACE( std::cout << operator O ( l.branches[1],r ) << "\n"; )	\
-     return qtl::expr(qtl::op::logical_and, {l, operator O ( l.branches[1],r ) }); \
+     NOTRACE( std::cout << operator O ( lb1,r ) << "\n"; )	\
+     return qtl::expr(qtl::op::logical_and, {l, operator O ( lb1,r ) }); \
     };break; \
       default: { return qtl::expr(qtl::op::p,{l,r}); }	\
    };\
       return qtl::expr(qtl::op::p,{l,r}); \
    };break;								\
- case qtl::op::less: case qtl::op::less_equal: case qtl::op::not_equal_to:  case qtl::op::equal_to: case qtl::op::greater_equal: case qtl::op::greater: { \
+ case static_cast<int>(qtl::op::less): case static_cast<int>(qtl::op::less_equal): case static_cast<int>(qtl::op::not_equal_to):  case static_cast<int>(qtl::op::equal_to): case static_cast<int>(qtl::op::greater_equal): case static_cast<int>(qtl::op::greater): { \
    NOTRACE( std::cout << __PRETTY_FUNCTION__ << "\n"; )			\
-     NOTRACE( std::cout << l.branches.size() << "\n";)			\
+     NOTRACE( std::cout << lb.branches.size() << "\n";)			\
      NOTRACE( std::cout << l << "\n";) \
      NOTRACE( std::cout << l.stringify() << "\n"; ) \
-     NOTRACE( std::cout << qtl::type_name<decltype(l.branches[1])>() << "\n"; )	\
-   return qtl::expr(qtl::op::logical_and,{l,qtl::expr(qtl::op::p,{l.branches[1],r})}); \
+     const expr_base_t& lb1 = get_base_tree(lb.branches[1]); \
+     NOTRACE( std::cout << qtl::type_name<decltype(lb1)>() << "\n"; )	\
+   return qtl::expr(qtl::op::logical_and,{l,qtl::expr(qtl::op::p,{make_expr(lb1),r})}); \
  };break;								\
     default: { return qtl::expr(qtl::op::p,{l,r}); }	\
 	    };						\
