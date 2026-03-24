@@ -1,10 +1,10 @@
 CXX=clang++
 
-# C++23 for coroutines support (final standard, not early C++20)
+# C++20 for coroutines support (stable, not experimental)
 CXXFLAGS= -v -Xlinker -L/opt/homebrew/opt/llvm/lib -fno-omit-frame-pointer -I/opt/homebrew/include
 
-clang++_flags= -glldb --std=c++23 -fdebug-macro -fstandalone-debug -fdiagnostics-show-template-tree
-g++_flags=--std=c++23 -fno-omit-frame-pointer -fpermissive
+clang++_flags= -glldb --std=c++20 -fdebug-macro -fstandalone-debug -fdiagnostics-show-template-tree
+g++_flags=--std=c++20 -fno-omit-frame-pointer -fpermissive
 
 CXXFLAGS+=$($(firstword $(CXX))_flags)
 

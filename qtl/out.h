@@ -52,14 +52,14 @@ namespace detail{
 #include "fileno.h"
 #ifdef DEBUG
 #define TRACE(x) x
+#else
+#define TRACE(x)
 #endif
 #ifdef FUZZING
-//#define TRACE(x)
+#undef TRACE
+#define TRACE(x)
 #endif
-#define NOTRACE(x) 
-#ifndef TRACE
-//#define TRACE(x)
-#endif
+#define NOTRACE(x)
 #ifndef WARN
 #define WARN(x) x
 #endif
