@@ -50,19 +50,10 @@ namespace detail{
 #endif
 
 #include "fileno.h"
-#ifdef DEBUG
-#define TRACE(x) x
-#else
+// TRACE/NOTRACE removed for C++20 compatibility - use debugger instead
 #define TRACE(x)
-#endif
-#ifdef FUZZING
-#undef TRACE
-#define TRACE(x)
-#endif
 #define NOTRACE(x)
-#ifndef WARN
-#define WARN(x) x
-#endif
+#define WARN(x)
 #define NOWARN(x)
 namespace qtl{
 

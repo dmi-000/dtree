@@ -17,9 +17,10 @@
 #include <algorithm>
 #include <variant>
 #include "radix_map.h"
-#include <experimental/coroutine>
-//using std::experimental::suspend_always=std::suspend_always;
-#include <cppcoro/recursive_generator.hpp>
+// Coroutines - commented out for initial C++20 compatibility testing
+// #include <experimental/coroutine>
+// //using std::experimental::suspend_always=std::suspend_always;
+// #include <cppcoro/recursive_generator.hpp>
 #include <sys/types.h>
 #include <unistd.h>
 #if 0

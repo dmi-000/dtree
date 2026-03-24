@@ -869,14 +869,11 @@ bool contains0()const{
 
      // U+00F8 - U+167F  LATIN SMALL LETTER O WITH STROKE - CANADIAN SYLLABICS BLACKFOOT W
      // ø U+00F8 LATIN SMALL LETTER O WITH STROKE
-     // ǃ U+01C3  latin letter exclamation mark , (post)alveolar click (ipa)
-     // ˄ U+02C4 Modifier Letter Up Arrowhead
-     // ˆ U+02C6 Modifier Letter Circumflex Accent
-     // ᐃ U+1403 Canadian Syllabics I
-     // ᐞ U+141E Canadian Syllabics Glottal Stop
-#define ᐃ ˄
-#define ᐞ ˄
-#define ˆ ˄
+     // factorial U+01C3  latin letter exclamation mark , (post)alveolar click (ipa)
+     // pow U+02C4 Modifier Letter Up Arrowhead
+     // pow U+02C6 Modifier Letter Circumflex Accent
+     // pow U+1403 Canadian Syllabics I
+     // pow U+141E Canadian Syllabics Glottal Stop
 
      // U+1681 - U+180D
 
@@ -922,20 +919,20 @@ bool contains0()const{
      // U+FE47 - U+FFFD PRESENTATION FORM FOR VERTICAL LEFT SQUARE BRACKET - REPLACEMENT CHARACTER
 
      // U+10000 - U+1FFFD LINEAR B SYLLABLE B008 A - CHEESE WEDGE (U+1F9C0)
-#define 🠑  ˄ // 🠑  U+1F811 Upwards Arrow with Small Equilateral Arrowhead
-#define 🠕  ˄ // 🠕  U+1F815 Upwards Arrow with Equilateral Arrowhead
-#define 🡅  ˄ // 🡅  U+1F845 Upwards Heavy Arrow
-#define 🡡  ˄ // 🡡  U+1F861 Wide-Headed Upwards Light Barb Arrow
+#define pow  pow // pow  U+1F811 Upwards Arrow with Small Equilateral Arrowhead
+#define pow  pow // pow  U+1F815 Upwards Arrow with Equilateral Arrowhead
+#define pow  pow // pow  U+1F845 Upwards Heavy Arrow
+#define pow  pow // pow  U+1F861 Wide-Headed Upwards Light Barb Arrow
 
      // U+20000 - U+2FFFD
 
-   basic_interval ˄(const basic_interval &p,const basic_interval &m)const{ // modular exponentiation U+02C4 
-    return (*this).˄(p) % m;  // todo  O(lg(m)) (this->^(floor(p),m) * this->^(p-floor(p))) % m
+   basic_interval pow(const basic_interval &p,const basic_interval &m)const{ // modular exponentiation U+02C4 
+    return (*this).pow(p) % m;  // todo  O(lg(m)) (this->^(floor(p),m) * this->^(p-floor(p))) % m
   }
-  basic_interval  ˄(const int &p,const basic_interval &m)const{ // modular exponentiation
-    return (*this).˄(p) % m;  // todo  O(lg(m))
+  basic_interval  pow(const int &p,const basic_interval &m)const{ // modular exponentiation
+    return (*this).pow(p) % m;  // todo  O(lg(m))
   }
-     basic_interval  ˄(const basic_interval &p)const{ // pow
+     basic_interval  pow(const basic_interval &p)const{ // pow
       if( is_point() && p.is_point() ){
       return (lex::number)std::pow((lex::number)this->l().value(),(lex::number)p.l().value());
       }
@@ -943,8 +940,8 @@ bool contains0()const{
       return *this;
     }
 
-     // ǃ U+01C3 
-   basic_interval ǃ()const{ // factorial
+     // factorial U+01C3 
+   basic_interval factorial()const{ // factorial
      //    basic_interval operator﹗(const basic_interval &b)const{ // factorial
     if( is_point() ){
       return (lex::number)std::lgamma((double)(lex::number)this->l().value()-1.0);
@@ -1456,7 +1453,7 @@ inline static const basic_interval gt{(lex::scalar)0<x::x};
 inline static const basic_interval gteq{x::x>=(lex::scalar)0};
 }; // end class partial_ordering
 
-qtl::interval operator<=>(const qtl::interval &lhs,const qtl::interval&rhs){
+qtl::interval compare_three_way(const qtl::interval &lhs,const qtl::interval&rhs){
   if( lhs.is_connected() && rhs.is_connected() ){
     if( lhs.u() <= rhs.l() ){ return partial_ordering::lt; }
     if( lhs.l() >= rhs.u() ){ return partial_ordering::gt; }
