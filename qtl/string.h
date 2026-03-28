@@ -577,13 +577,13 @@ public:
       /**/NOTRACE(std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << std::endl;)
 #if 0
       if( p!=e && *p=='\0' ){
-#elsif 0
+#elif 0
       using boost::spirit::x3::byte_;
       using boost::spirit::x3::char_;
       using boost::spirit::char_encoding::ascii;
       if( parse(p,e, &(byte_(0)>>byte_),c) ){
       //      if( parse(p,e, &(char_(0)>>char_(0x80,0xff)),c) ){
-#elsif 0
+#elif 0
       }}
 #else
       if( P()!=E() && *P()=='\0' && P()+1!=E() && (unsigned char)*(P()+1)>=0x80 ){

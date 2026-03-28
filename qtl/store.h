@@ -17,10 +17,10 @@
 #include <algorithm>
 #include <variant>
 #include "radix_map.h"
-// Coroutines - commented out for initial C++20 compatibility testing
-// #include <experimental/coroutine>
-// //using std::experimental::suspend_always=std::suspend_always;
-// #include <cppcoro/recursive_generator.hpp>
+// Coroutines for C++20
+#include <coroutine>
+// using std::experimental::suspend_always=std::suspend_always;
+#include "std20_recursive_generator.hpp"
 #include <sys/types.h>
 #include <unistd.h>
 #if 0
@@ -2415,46 +2415,48 @@ template<typename R>
     TRACE( if( ret ){ std::cerr << *ret << '\n'; } )
     return ret;
   }
-
-  static std::tuple<int,boundary_t> partcount(int i, const sample<row> &p, const sample<row> &f, const std::set<boundary_t> &B){
-    TRACE( std::cerr << __PRETTY_FUNCTION__ << "(\n" << i << ","  << p << ",\n" << f << "," << B << ")" << '\n'; )
-    std::tuple<int,boundary_t> ret={-1,{}};
-    using val_t=std::remove_cv_t<std::remove_reference_t<decltype(p[0][i])>>;
-    if( p.empty()||f.empty() ){ return ret; }
-    std::vector<val_t> pi;
-    std::vector<val_t> fi;
-    fi.reserve(f.size());
-    for( auto x:f ){
-      if( i<x.size() ){ fi.push_back( x[i] ); }
-    }
-    if( f.size()<=0 ){ return ret; }
-    pi.reserve(p.size());
-    for( auto x:p ){
-      if( i<x.size() ){ pi.push_back( x[i] ); }
-    }
-    std::vector<decltype(pi.begin())>pp;
-    std::vector<decltype(fi.begin())>fp;
-    pp.reserve(B.size());
-    fp.reserve(B.size());
-    TRACE( std::cerr << pi.size() << ":" << fi.size() << "\n"; )
-    for( auto b:B ){
-      auto bp=[b](val_t x){ return x<b; };
-      pp.push_back(std::partition(pp.empty()?pi.begin():pp.back(),pi.end(),bp));
-      fp.push_back(std::partition(fp.empty()?fi.begin():fp.back(),fi.end(),bp));
-      NOTRACE( std::cerr << b <<":"<< pp.back()-pi.begin() << ":" << fp.back()-fi.begin() << "\n"; )
-	if( pp.back()==pi.begin() && fp.back()!=fi.begin() ){
-	  ret={fp.back()-fi.begin(),b};
-	}else if( pp.back()==pi.end() && fp.back()!=fi.end() ){
-	  if( std::get<0>(ret) < fi.end()-fp.back() ){
-	    ret={fi.end()-fp.back(),b};
-          }
-	  break;
-	}
-    }
-    TRACE( std::cerr << __FUNCTION__ << "=" << ret << '\n'; )
-    return ret;
-  }
 #endif
+
+
+//   static std::tuple<int,boundary_t> partcount(int i, const sample<row> &p, const sample<row> &f, const std::set<boundary_t> &B){
+//     TRACE( std::cerr << __PRETTY_FUNCTION__ << "(\n" << i << ","  << p << ",\n" << f << "," << B << ")" << '\n'; )
+//     std::tuple<int,boundary_t> ret={-1,{}};
+//     using val_t=std::remove_cv_t<std::remove_reference_t<decltype(p[0][i])>>;
+//     if( p.empty()||f.empty() ){ return ret; }
+//     std::vector<val_t> pi;
+//     std::vector<val_t> fi;
+//     fi.reserve(f.size());
+//     for( auto x:f ){
+//       if( i<x.size() ){ fi.push_back( x[i] ); }
+//     }
+//     if( f.size()<=0 ){ return ret; }
+//     pi.reserve(p.size());
+//     for( auto x:p ){
+//       if( i<x.size() ){ pi.push_back( x[i] ); }
+//     }
+//     std::vector<decltype(pi.begin())>pp;
+//     std::vector<decltype(fi.begin())>fp;
+//     pp.reserve(B.size());
+//     fp.reserve(B.size());
+//     TRACE( std::cerr << pi.size() << ":" << fi.size() << "\n"; )
+//     for( auto b:B ){
+//       auto bp=[b](val_t x){ return x<b; };
+//       pp.push_back(std::partition(pp.empty()?pi.begin():pp.back(),pi.end(),bp));
+//       fp.push_back(std::partition(fp.empty()?fi.begin():fp.back(),fi.end(),bp));
+//       NOTRACE( std::cerr << b <<":"<< pp.back()-pi.begin() << ":" << fp.back()-fi.begin() << "\n"; )
+// 	if( pp.back()==pi.begin() && fp.back()!=fi.begin() ){
+// 	  ret={fp.back()-fi.begin(),b};
+// 	}else if( pp.back()==pi.end() && fp.back()!=fi.end() ){
+// 	  if( std::get<0>(ret) < fi.end()-fp.back() ){
+// 	    ret={fi.end()-fp.back(),b};
+//           }
+// 	  break;
+// 	}
+//     }
+//     TRACE( std::cerr << __FUNCTION__ << "=" << ret << '\n'; )
+//     return ret;
+//   }
+// #endif
   //     auto partcount(int i,const rows &p,const rows &f,const lex::string &s){
   //       return partcount(i,p,f,std::array<boundary_t,2>{{{s,infi},{s,supre}}});
   //     }
@@ -2510,10 +2512,10 @@ template<typename R>
       if( i<ki.path().size() && ki.path()[i].is_point() ){ continue; }
       NOTRACE( choosesplit( i%ki.path(),ki,x); )
       NOTRACE( partcount0(i%ki.path(), ki.pass, ki.fail, x) );
-     if( auto b = partcount(i%ki.path(), ki.pass, ki.fail, x); std::get<0>(b)>0 ){
-        split(ki, i, std::get<1>(b));
-        return;
-     }
+// //      if( auto b = partcount(i%ki.path(), ki.pass, ki.fail, x); std::get<0>(b)>0 ){
+//         split(ki, i, std::get<1>(b));
+//         return;
+//      }
     }
   }
   
@@ -2779,7 +2781,7 @@ template<typename R>
 #else
    static  path trace_path;
    static  row trace_row;
-  #define BASE_T cppcoro::recursive_generator<qtl::row>
+  #define BASE_T recursive_generator<qtl::row>
    class lval:public BASE_T {
      using base_t = BASE_T;
 #undef BASE_T
@@ -2791,7 +2793,7 @@ template<typename R>
      path::requirements  predicate;
      //lval(const std::vector<std::string> &v={}):prefix(v){}
      //     lval(const std::vector<lex::string> &v={},const expr &e={}):prefix(v),predicate(e),t(tp){
-     /*static constexpr*/ auto co_search_leaf(const rows &r)-> cppcoro::recursive_generator<qtl::row>{
+     /*static constexpr*/ auto co_search_leaf(const rows &r)-> recursive_generator<qtl::row>{
        TRACE(std::cerr << __PRETTY_FUNCTION__ << '\n';)
       for( auto i:r ){
 	if( (path(),i).satisfies(this->predicate) == kleen::T ){
@@ -2804,7 +2806,7 @@ template<typename R>
     TRACE( std::cerr << __FUNCTION__ << " co_return;\n"; )
       co_return;
     };
-    /*static*/ auto co_search_vertex(const path &p)->cppcoro::recursive_generator<qtl::row>{
+    /*static*/ auto co_search_vertex(const path &p)->recursive_generator<qtl::row>{
       TRACE(std::cerr << __PRETTY_FUNCTION__ << '\n';)
     NOTRACE(std::cerr << l->m << '\n';)
     NOTRACE(std::cerr << *l->m << '\n';)
@@ -2951,10 +2953,10 @@ ld: symbol(s) not found for architecture x86_64
      #if 0
      base_t::iterator
      #else
-     std::optional<cppcoro::recursive_generator<qtl::row>>
+     std::optional<recursive_generator<qtl::row>>
      #endif
      {
-       using base_coro=std::optional<cppcoro::recursive_generator<qtl::row>>;
+       using base_coro=std::optional<recursive_generator<qtl::row>>;
        using base_iterator=base_t::iterator;
        // using base_iterator::base_iterator;
      using base_coro::base_coro;
@@ -2964,17 +2966,17 @@ ld: symbol(s) not found for architecture x86_64
        /*
  ==49366==ERROR: AddressSanitizer: heap-use-after-free on address 0x6190000447a0 at pc 0x000100f7dbfd bp 0x7ffeeeeb6b40 sp 0x7ffeeeeb6b38 
 freed by thread T0 here:
-    #5 0x100f76482 in cppcoro::recursive_generator<qtl::row>::~recursive_generator() /Users/dmi/github/questrel/dtree.coroutine/./cppcoro/recursive_generator.hpp:205:3
+    #5 0x100f76482 in recursive_generator<qtl::row>::~recursive_generator() /Users/dmi/github/questrel/dtree.coroutine/./cppcoro/recursive_generator.hpp:205:3
     #6 0x100f733d3 in qtl::store::lval::iterator::begin() /Users/dmi/github/questrel/dtree.coroutine/./qtl/store.h:2945:10
        */
 #else
-       //       std::optional<cppcoro::recursive_generator<qtl::row>> coro;
+       //       std::optional<recursive_generator<qtl::row>> coro;
        /*
 ./qtl/store.h:3363:94: error: call to implicitly-deleted copy constructor of 'store::lval::iterator'
         iterator(const model::lval::iterator &m, const store::lval::iterator &s):m(m),s(s){}
                                                                                              ^ ~
 ./qtl/store.h:2937:47: note: copy constructor of 'iterator' is implicitly deleted because field 'coro' has a deleted copy constructor
-       cppcoro::recursive_generator<qtl::row> coro;
+       recursive_generator<qtl::row> coro;
                                               ^
 ./cppcoro/recursive_generator.hpp:201:3: note: 'recursive_generator' has been explicitly marked deleted here
                 recursive_generator(const recursive_generator& other) = delete;
@@ -2983,7 +2985,7 @@ freed by thread T0 here:
 #endif
      public:
 #if 0
-       iterator(const lval *b,const cppcoro::recursive_generator<qtl::row> &c):B(b),base_coro(c),base_it(base_coro.begin()){
+       iterator(const lval *b,const recursive_generator<qtl::row> &c):B(b),base_coro(c),base_it(base_coro.begin()){
 	 TRACE( std::cerr << 
 		__PRETTY_FUNCTION__ << "(" << b << "," /* << p */ << ")" <<  "\n"; )
          TRACE( std::cerr << "m_promise=" << this-> m_promise << "\n"; )
@@ -3024,13 +3026,13 @@ freed by thread T0 here:
 ./qtl/store.h:3004:10: error: call to implicitly-deleted copy constructor of 'qtl::store::lval::iterator'
          return *this;
                 ^~~~~
-./qtl/store.h:2932:21: note: copy constructor of 'iterator' is implicitly deleted because base class 'std::optional<cppcoro::recursive_generator<qtl::row>>' has a deleted copy constructor
+./qtl/store.h:2932:21: note: copy constructor of 'iterator' is implicitly deleted because base class 'std::optional<recursive_generator<qtl::row>>' has a deleted copy constructor
      class iterator:public
                     ^
 /usr/local/Cellar/llvm/12.0.0/include/c++/v1/optional:689:41: note: explicitly defaulted function was implicitly deleted here
     _LIBCPP_INLINE_VISIBILITY constexpr optional(const optional&) = default;
                                         ^
-/usr/local/Cellar/llvm/12.0.0/include/c++/v1/optional:587:7: note: copy constructor of 'optional<cppcoro::recursive_generator<qtl::row>>' is implicitly deleted because base class '__optional_sfinae_ctor_base_t<cppcoro::recursive_generator<qtl::row>>' (aka '__sfinae_ctor_base<is_copy_constructible<recursive_generator<row>>::value, is_move_constructible<recursive_generator<row>>::value>') has a deleted copy constructor
+/usr/local/Cellar/llvm/12.0.0/include/c++/v1/optional:587:7: note: copy constructor of 'optional<recursive_generator<qtl::row>>' is implicitly deleted because base class '__optional_sfinae_ctor_base_t<recursive_generator<qtl::row>>' (aka '__sfinae_ctor_base<is_copy_constructible<recursive_generator<row>>::value, is_move_constructible<recursive_generator<row>>::value>') has a deleted copy constructor
     , private __optional_sfinae_ctor_base_t<_Tp>
       ^
 
@@ -3175,7 +3177,7 @@ friend std::ostream& operator<<(std::ostream& os, const std::pair<T0,T1>& obj){
     co_return;
   }
 #endif
-  static  cppcoro::recursive_generator<qtl::row> search_vertex(const lattice &l,const path &p,const qtl::optexpr<qtl::basic_interval<lex::scalar, void>, qtl::intvec<>> &e){
+  static  recursive_generator<qtl::row> search_vertex(const lattice &l,const path &p,const qtl::optexpr<qtl::basic_interval<lex::scalar, void>, qtl::intvec<>> &e){
     TRACE(std::cerr << __PRETTY_FUNCTION__ << " " << __LINE__ << '\n';)
       TRACE(std::cerr << "l.m=" << l.m << '\n';)
       TRACE(std::cerr << "*l.m=" << *l.m << '\n';)
@@ -3200,7 +3202,7 @@ friend std::ostream& operator<<(std::ostream& os, const std::pair<T0,T1>& obj){
     TRACE( std::cerr << __FUNCTION__ << " co_return;\n"; )
     co_return;
   }
-  static cppcoro::recursive_generator<qtl::row> search_leaf(const rows &r, const qtl::optexpr<qtl::basic_interval<lex::scalar, void>, qtl::intvec<>> &e){
+  static recursive_generator<qtl::row> search_leaf(const rows &r, const qtl::optexpr<qtl::basic_interval<lex::scalar, void>, qtl::intvec<>> &e){
     TRACE(std::cerr << __PRETTY_FUNCTION__ << "(" << r << "," /* << e->stringify() */ << ") " << __LINE__ << '\n'; )
       for( auto i:r ){
 	TRACE(std::cerr << "i = " << i << "\n"; );
@@ -3216,7 +3218,7 @@ friend std::ostream& operator<<(std::ostream& os, const std::pair<T0,T1>& obj){
       co_return;
   }
 
-#define BASE_T cppcoro::recursive_generator<qtl::row>
+#define BASE_T recursive_generator<qtl::row>
   class co_lval:public BASE_T {
      using base_t = BASE_T;
 #undef BASE_T
@@ -3224,7 +3226,7 @@ friend std::ostream& operator<<(std::ostream& os, const std::pair<T0,T1>& obj){
      std::shared_ptr<class lattice> l;
      path::requirements  predicate;
      std::vector<base_t> filters;
-    /*static constexpr*/ auto co_search_leaf(const rows &r)-> cppcoro::recursive_generator<qtl::row>{
+    /*static constexpr*/ auto co_search_leaf(const rows &r)-> recursive_generator<qtl::row>{
       TRACE(std::cerr << __PRETTY_FUNCTION__ << '\n';)
       for( auto i:r ){
 	if( (path(),i).satisfies(this->predicate) == kleen::T ){
@@ -3236,7 +3238,7 @@ friend std::ostream& operator<<(std::ostream& os, const std::pair<T0,T1>& obj){
     TRACE( std::cerr << __FUNCTION__ << " co_return;\n"; )
       co_return;
     };
-    /*static*/ auto co_search_vertex(const path &p)->cppcoro::recursive_generator<qtl::row>{
+    /*static*/ auto co_search_vertex(const path &p)->recursive_generator<qtl::row>{
       TRACE(std::cerr << __PRETTY_FUNCTION__ << '\n';)
     NOTRACE(std::cerr << l->m << '\n';)
     NOTRACE(std::cerr << *l->m << '\n';)

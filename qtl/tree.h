@@ -1008,7 +1008,7 @@ qtl::expr _e(qtl::op::negate,{{e}});
 int main(){
 #if 0
     std::cout << e.recurse<&qtl::operation<long>::eval>() << std::endl;
-#elseif 0
+#elif 0
     //std::cout << e.recurse<&decltype(e)::eval>(0) << std::endl;
     //    std::cout << e.recurse<&qtl::operation<long>::eval>() << std::endl;
     std::cout << e.eval() << std::endl; 

@@ -67,16 +67,16 @@ using  namespace qtl::literals;
   inline static std::map<std::string,std::map<std::string,expr>> symtab={
   {"",
    {
-         {"col0",0_col},
-         {"col1",1_col},
-         {"col2",2_col},
-         {"col3",3_col},
-         {"col4",4_col},
-         {"col5",5_col},
-         {"col6",6_col},
-         {"col7",7_col},
-         {"col8",8_col},
-         {"col9",9_col},
+         {"col0",0_column},
+         {"col1",1_column},
+         {"col2",2_column},
+         {"col3",3_column},
+         {"col4",4_column},
+         {"col5",5_column},
+         {"col6",6_column},
+         {"col7",7_column},
+         {"col8",8_column},
+         {"col9",9_column},
    }
   },
  };
@@ -331,7 +331,7 @@ static auto const select_clause=
 	 NOTRACE( std::cout << file << '\n'; );
          auto v=file[ from ];
          if( at_c<2>(_attr(ctx)) ){
-           v=v[at_c<2>(_attr(ctx))->bind( symtab[from] )];
+//            v=v[at_c<2>(_attr(ctx))->bind( symtab[from] )];
          }
 	 TRACE(std::cout << v.predicate << '\n'; )
 	 for( auto r:v ){
@@ -509,7 +509,7 @@ namespace tools
 	    } 
 	  std::cout << '\n';
   }
-#elsif 0
+#elif 0
 namespace qtl{
 } // end namespace qtl
 using qtl::parse_test;
