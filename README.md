@@ -7,6 +7,10 @@ For more information about the concepts underpinning dtree and the individual fi
 
 ## Prequisites
 
+- C++20 compiler (clang++ 14+ or g++ 11+ recommended)
+- Boost (for boost::spirit::X3 and optionally boost::multiprecision)
+- Standard library coroutine support (`<coroutine>` — no cppcoro dependency)
+
 ## Contributing
 Contributor guidelines can be found in [CONTRIBUTING.md](CONTRIBUTING.md).
 

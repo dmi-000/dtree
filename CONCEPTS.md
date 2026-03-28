@@ -1,7 +1,7 @@
 # dtree
 
 Library is header-only\
-requires --std=c++17\
+requires --std=c++20\
 depends on boost::spirit::X3 (and boost::multiprecision::cpp_dec_float if you want decfloat support)\
 clang version 7.0.1 requires BOOST_LIB_VERSION "1_69" SPIRIT_X3_VERSION 0x3003 \
 clang version 10.0.0 requires BOOST_LIB_VERSION "1_73"  SPIRIT_X3_VERSION 0x3004 \
