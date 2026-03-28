@@ -21,14 +21,7 @@
 
 //#include <boost/regex.hpp>
 #include <regex>
-//#ifndef __clang__
 #include <optional>
-//#define OPTIONAL optional
-//#else
-//#include <experimental/optional>
-//#define OPTIONAL experimental::optional
-//#endif
-//#include  <experimental/type_traits>
 #if defined(__GNUC__)
 #define DEPRECATE(foo, msg) foo __attribute__((deprecated(msg)))
 #define PP_CAT(x,y) PP_CAT1(x,y)
@@ -605,19 +598,11 @@ template <class T> struct has_mapped_type{
 #include <type_traits>
 
 namespace detail {
-  // Needed for some older versions of GCC
-  template<typename...>
-    struct voider { using type = void; };
-
-  // std::void_t will be part of C++17, but until then define it ourselves:
-  template<typename... T>
-    using void_t = typename voider<T...>::type;
-
   template<typename T, typename U = void>
     struct is_mappish_impl : std::false_type { };
 
   template<typename T>
-    struct is_mappish_impl<T, void_t<typename T::key_type,
+    struct is_mappish_impl<T, std::void_t<typename T::key_type,
     typename T::mapped_type,
     decltype(std::declval<T&>()[std::declval<const typename T::key_type&>()])>>
     : std::true_type { };

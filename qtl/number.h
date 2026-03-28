@@ -11,13 +11,7 @@
 #endif
 #include "string.h"
 #include "out.h"
-#ifndef __clang__
-//#include <decimal/decimal>
 #include <optional>
-#else
-//#include <experimental/optional>
-#include <optional>
-#endif
 #include <boost/multiprecision/cpp_dec_float.hpp>
 #include <algorithm>
 #include <cstring>

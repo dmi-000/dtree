@@ -8,11 +8,7 @@
 #include <boost/math/special_functions/digamma.hpp>
 #include <functional>
 #include <cstddef>
-//#ifndef __clang__
 #include <optional>
-//#else
-//#include <experimental/optional>
-//#endif
 #ifdef __clang__
 //#define BND \U00e28baf
 #else

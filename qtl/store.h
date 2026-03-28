@@ -29,17 +29,6 @@ template<typename T>
    return this->get();
   }
 #endif
-#if __linux__ || __clang_major__ < 7
-template<class InputIt, class Size, class UnaryFunction>
-static   InputIt for_each_n(InputIt first, Size n, UnaryFunction f)
-{
-  for (Size i = 0; i < n; ++first, (void) ++i) {
-    f(*first);
-  }
-  return first;
-}
-#else
-#endif
 namespace qtl {
 //using std::nullptr_t;
 #if 1

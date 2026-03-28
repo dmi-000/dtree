@@ -1582,7 +1582,7 @@ public:
   typedef offset size_type;
   typedef void difference_type;
 
-  struct key_compare : public std::__binary_function<key_type, key_type, bool> {
+  struct key_compare {
     const character_set_t &cs;
     key_compare(const character_set_t &cs_) : cs(cs_) {}
     bool operator()(const key_type &x, const key_type &y) const {
@@ -1590,7 +1590,7 @@ public:
     }
   };
 
-  struct value_compare : public std::__binary_function<value_type, value_type, bool> {
+  struct value_compare {
     const character_set_t &cs;
     value_compare(const character_set_t &cs_) : cs(cs_) {}
     bool operator()(const value_type &x, const value_type &y) const {
@@ -2660,7 +2660,7 @@ public:
     offset key_length;
   };
 
-  class record_offset_sort_by_id_t : public std::__binary_function<offset, offset, bool> {
+  class record_offset_sort_by_id_t {
     const radix_map &map;
   public:
     record_offset_sort_by_id_t(const radix_map &map_) : map(map_) {}
