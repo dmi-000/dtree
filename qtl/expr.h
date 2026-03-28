@@ -176,7 +176,7 @@ static auto const num_rule=x3::rule<struct num_rule, qtl::expr>{} =
 #endif
     ;
 
- static auto const id_char= (alnum|char_('_') );
+ static auto const id_char= (alnum|char_("_.") );
 
  //static x3::rule<struct _, qtl::expr> const expr_rule;
  static expr_rule_t const expr_rule;
@@ -223,11 +223,16 @@ static auto const num_rule=x3::rule<struct num_rule, qtl::expr>{} =
 	 NOTRACE( std::cerr << "_val=" << _val(ctx) << "\n"; )
    }) ];
 
+        static inline struct {
+	   std::set<std::string> symbols;
+	   std::string name;
+         } name_space;
+
  static auto const id_rule=expr_rule_t{} = 
    //   (name_rule >> -( lit("(") >>  expr_rule  /* >> (expr_rule % lit(",")) */ >> lit(")") ) )[ ([](auto& ctx){ 
      (name_rule >> -( lit("(") >  list_rule >  lit(")") ) )[ ([](auto& ctx){ 
        using boost::fusion::at_c;
-		NOTRACE(	  std::cerr << "id_rule " << "\n"; )
+		TRACE(	  std::cerr << "id_rule " << "\n"; )
 		NOTRACE( std::cout << "type(_attr): " <<  qtl::type_name<decltype(_attr(ctx))>() << "\n"; )
 		NOTRACE( std::cout << "type(_val): " << qtl::type_name<decltype(_val(ctx))>() << "\n"; )
                 NOTRACE( std::cout << "at_c<0>:" << qtl::type_name<decltype( at_c<0>(_attr(ctx)) )>() << "\n"; )
@@ -235,26 +240,18 @@ static auto const num_rule=x3::rule<struct num_rule, qtl::expr>{} =
        if(  at_c<1>(_attr(ctx)) ){
 	 NOTRACE( std::cout << "type(*at_c<1>) " << qtl::type_name<decltype( *at_c<1>(_attr(ctx)) )>() << "\n"; )
          NOTRACE( std::cout << "at_c<1>.size()=" <<  at_c<1>(_attr(ctx))->size() << "\n"; )
-	   //	   _val(ctx)=qtl::expr(qtl::operation(qtl::op::function,at_c<0>(_attr(ctx))),{*at_c<1>(_attr(ctx))});
 	   _val(ctx)=qtl::expr(qtl::operation(qtl::op::function,at_c<0>(_attr(ctx))),*at_c<1>(_attr(ctx)));
-	   //           _val(ctx)=qtl::expr(qtl::op::lit,lex::number::sem("123"));
        }else{
-
-		//    	  std::cout << "_where:" <<  _where(ctx) << "\n";
-		//    	  std::cout << "_attr:" <<  _attr(ctx) << "\n";
-		//	  _val(ctx)=lex::number(lex::number::sem(std::string( boost::fusion::at_c<0>(_attr(ctx)).begin(),boost::fusion::at_c<0>(_attr(ctx)).end())));
-
-       //	_val(ctx)=qtl::expr(qtl::op::lit,lex::number::sem("123"));
-       _val(ctx)=qtl::expr(qtl::op::name,at_c<0>(_attr(ctx)));
+          _val(ctx)=qtl::expr(qtl::op::name,at_c<0>(_attr(ctx)));
        }
-		NOTRACE( std::cerr << "_val=" << _val(ctx) << "\n"; )
+       NOTRACE( std::cerr << "_val=" << _val(ctx) << "\n"; )
 	}) ];
 #endif
 
 #if 1
  static auto const atom_rule=
    expr_rule_t{}=
-(col_rule | lit_rule | id_rule | '(' > expr_rule > ')')
+   (col_rule | lit_rule | id_rule | '(' > expr_rule > ')')
 #if 0
   [ ([](auto& ctx){
 	 NOTRACE( std::cerr << "atom_rule " << __LINE__ << "\n"; )

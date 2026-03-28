@@ -210,7 +210,7 @@ class operation{
     int precedence;
     public:
      ps(const std::string &s,int p):std::string(s),precedence(p){}
-     ps(const std::string &s,const operation &o):std::string(s),precedence(optable[o.op].precedence){}
+     ps(const std::string &s,const operation &o):std::string(s),precedence(optable[o.o].precedence){}
   };
     struct methods{
       operand_t(*eval)(/**/const operation &t,/**/const lazyvec<operand_t>&,const symbol_table &,const /**/V1/**/ /*std::vector<V>*/&);
@@ -275,13 +275,7 @@ class operation{
         }
   }
 
-  class ob:public operation{
-    public:
-    bool b=false;
-  ob(const operation &o,bool b=false):operation(o),b(b){}
-    operator operation()const{ return (operation)*this; }
-    operator bool()const{ return this->b; }
-  }; // end class ob;
+  // Note: ob moved outside class to avoid incomplete type issue in C++17
 #if 0
   ob bind(const std::vector<ob>&o,const std::map<std::string,operation>&b){
     if( auto t=(o==op::name&&identifier?b.at(o):b.end())!=b.end() ){
@@ -795,6 +789,20 @@ friend std::ostream& operator<<(std::ostream& os, const operation &op){
 
  }; // end class operation
 
+// ob class moved outside operation to avoid incomplete type issue in C++17
+template<class V=qtl::interval, class V1=intvec<lex::scalar>>
+class ob:public operation<V,V1>{
+  public:
+  using base_t = operation<V,V1>;
+  bool b=false;
+  ob(const operation<V,V1> &o,bool b=false):base_t(o),b(b){}
+  operator operation<V,V1>()const{ return (operation<V,V1>)*this; }
+  operator bool()const{ return this->b; }
+}; // end class ob;
+
+// Forward declaration for ob_expr
+template<typename V, typename V1> class ob_expr;
+
 template<typename V=qtl::interval,typename V1=/*std::vector<V>*/intvec<lex::scalar>>
 #define BASE_T tree<operation<V,V1>>
 class optree:public BASE_T{
@@ -807,38 +815,30 @@ class optree:public BASE_T{
  // optree(const base_t &o):base_t(o){}
  // optree(const OP &o):base_t(o){}
  optree(const OP &o,const std::vector<optree> &vo={}):base_t(o){
-   std::vector<base_t> b;
    for( auto i:vo ){
-     b.push_back(i);
+     this->branches.push_back(static_cast<const base_t&>(i));
    }
-   base_t::branches=b;
  }
  optree(enum op o,const std::vector<optree> &vo={}):base_t(OP(o)){
-   std::vector<base_t> b;
    for( auto i:vo ){
-     b.push_back(i);
+     this->branches.push_back(static_cast<const base_t&>(i));
    }
-   base_t::branches=b;
  }
 // optree(enum op o,const V &v):base_t(OP(o,v)){}
 #if 0
  optree(enum op o,const std::string &id,const std::vector<optree> &vo={}):base_t(OP(o,id)){
-   std::vector<base_t> b;
    for( auto i:vo ){
-     b.push_back(i);
+     this->branches.push_back(static_cast<const base_t&>(i));
    }
-   base_t::branches=b;
  }
 #endif
  optree(enum op o,const V &v,const std::vector<optree> &vo/*={}*/):base_t(OP(o,v)){
-   std::vector<base_t> b;
    for( auto i:vo ){
-     b.push_back(i);
+     this->branches.push_back(static_cast<const base_t&>(i));
    }
-   base_t::branches=b;
  }
  std::string stringify()const{
-   return base_t::template recurse<struct OP::ps>(&OP::stringify);
+   return this->template recurse<struct OP::ps>(&OP::stringify);
   }
 #if 0
  // V eval(const typename OP::symbol_table &syms={},const std::vector<V> &cols={})const{
@@ -851,25 +851,18 @@ class optree:public BASE_T{
  // }
  // template<typename V1=std::vector<V>>
  V eval(const typename OP::symbol_table &syms={},const V1 &cols={})const{
-   return base_t::template recurse<V,const typename OP::symbol_table &,const V1 &>(&OP::eval,syms,cols);
+   return this->template recurse<V,const typename OP::symbol_table &,const V1 &>(&OP::eval,syms,cols);
  }
 #endif
- class ob:public optree{
-    bool b=false;
- public:
-    ob(const optree &o,bool b=false):optree(o),b(b){}
-    operator optree()const{ return (optree)*this; }
-    operator bool()const{ return this->b; }
- }; // end class ob;
- ob bind(const std::map<std::string,optree>&s){
+ ob_expr<V,V1> bind(const std::map<std::string,optree>&s){
    NOTRACE( std::cerr << __PRETTY_FUNCTION__ << '\n'; )
-   if( auto p=(base_t::o==qtl::op::name &&base_t::identifier?s.find(*base_t::identifier):s.end()); p!= s.end() ){
+   if( auto p=(this->o==qtl::op::name &&this->identifier?s.find(*this->identifier):s.end()); p!= s.end() ){
      return {p->second,true};
    }
    NOTRACE( std::cerr << *this << '\n'; )
    std::vector<base_t>v;
    bool b=false;
-   for( auto const &x:base_t::branches ){
+   for( auto const &x:this->branches ){
      NOTRACE( std::cerr << "x=" << x << '\n'; )
        NOTRACE( std::cerr << "(base_t)x=" << (base_t)x << '\n'; )
        NOTRACE( std::cerr << "base_t(x)" << base_t(x) << '\n'; )
@@ -889,34 +882,34 @@ class optree:public BASE_T{
    #undef BASE_T
    using base_t::base_t;
  }; // end class optree::hints
- hints hints(){
+ hints hints()const{
    class hints ret;
    auto set=[&ret,this](sign s){
     using b_t=typename V::b_t;
-     if( base_t::branches[0].o==qtl::op::column && base_t::branches[1].cachevalue ){
-       auto i=std::stoul(*base_t::branches[0].identifier);
+     if( this->branches[0].o==qtl::op::column && this->branches[1].cachevalue ){
+       auto i=std::stoul(*this->branches[0].identifier);
        if( s==sign(0) ){
-	 ret[i].insert(base_t::branches[1].cachevalue->l());
-	 ret[i].insert(base_t::branches[1].cachevalue->u());
+	 ret[i].insert(this->branches[1].cachevalue->l());
+	 ret[i].insert(this->branches[1].cachevalue->u());
        }else{
-         ret[i].insert({base_t::branches[1].cachevalue->l().value(),s});
+         ret[i].insert({this->branches[1].cachevalue->l().value(),s});
        }
-     }else if(  base_t::branches[1].o==qtl::op::column && base_t::branches[0].cachevalue ){
-       auto i=std::stoul(*base_t::branches[1].identifier);
+     }else if(  this->branches[1].o==qtl::op::column && this->branches[0].cachevalue ){
+       auto i=std::stoul(*this->branches[1].identifier);
        if( s==sign(0) ){
-	 ret[i].insert(base_t::branches[0].cachevalue->l());
-	 ret[i].insert(base_t::branches[0].cachevalue->u());
+	 ret[i].insert(this->branches[0].cachevalue->l());
+	 ret[i].insert(this->branches[0].cachevalue->u());
         }else{
-         ret[i].insert({base_t::branches[0].cachevalue->l().value(),-s}); 
+         ret[i].insert({this->branches[0].cachevalue->l().value(),-s});
        }
      }
    };
-   switch( base_t::o ){
+   switch( this->o ){
    case qtl::op::equal_to: case qtl::op::not_equal_to: { set(sign(0)); }; break;
-   case qtl::op::less: case qtl::op::greater_equal:{ set(sign(-1)); }; break;     
-   case qtl::op::greater: case qtl::op::less_equal:{ set(sign(1)); }; break;     
+   case qtl::op::less: case qtl::op::greater_equal:{ set(sign(-1)); }; break;
+   case qtl::op::greater: case qtl::op::less_equal:{ set(sign(1)); }; break;
    case qtl::op::logical_not: case qtl::op::logical_and: case qtl::op::logical_or: {
-      for( auto const &x:base_t::branches ){
+      for( auto const &x:this->branches ){
 	for( auto const &h:(optree((base_t)x,x.branches)).hints() ){
 	  ret[h.first].insert(h.second.begin(),h.second.end());
         }
@@ -927,6 +920,17 @@ class optree:public BASE_T{
    return ret;
  }
 };//end class optree
+
+// ob_expr class for optree - defined outside to avoid incomplete type
+template<typename V=qtl::interval,typename V1=intvec<lex::scalar>>
+class ob_expr:public optree<V,V1>{
+   bool b=false;
+   using base_t = optree<V,V1>;
+ public:
+    ob_expr(const optree<V,V1> &o,bool b=false):base_t(o),b(b){}
+    operator optree<V,V1>()const{ return (optree<V,V1>)*this; }
+    operator bool()const{ return this->b; }
+}; // end class ob_expr
 
  using expr=optree<qtl::interval,intvec<lex::scalar>>;
 
@@ -1004,7 +1008,7 @@ qtl::expr _e(qtl::op::negate,{{e}});
 int main(){
 #if 0
     std::cout << e.recurse<&qtl::operation<long>::eval>() << std::endl;
-#elseif 0
+#elif 0
     //std::cout << e.recurse<&decltype(e)::eval>(0) << std::endl;
     //    std::cout << e.recurse<&qtl::operation<long>::eval>() << std::endl;
     std::cout << e.eval() << std::endl; 

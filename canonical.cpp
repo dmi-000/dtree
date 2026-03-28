@@ -5,17 +5,28 @@
 #include <iostream>
 #include <string>
 #include <unistd.h>
+#include <unordered_set>
+#include <vector>
 
 using namespace std;
 
 char usage[] =
 " [-C(SV)]"
 " [-S(QL)]"
-" [-v(erbose)]"
+" [-l(etter_subsets)] maximum_length | -s(ubstrings)] maximum_length"
+" [-t(able) name]"
+" [-v(erbose)] (output column names before outputting column values)"
 " [file]";
+
+typedef unsigned long long mask_t;
+const size_t mask_length = sizeof(mask_t) * 8 / 5;
+
 
 bool CSV = false;
 bool SQL = false;
+size_t max_subset_length = 0;
+size_t max_substring_length = 0;
+const char *table_name = "word";
 short verbose = 0;
 
 struct element_t {
@@ -52,6 +63,17 @@ bool isxvowel(unsigned char c) {
 // subroutine for comparing letters
 static int compare_letters(const void *l1, const void *l2) {
   return *(char *) l1 - *(char *) l2;
+}
+
+// transform word to ASCII canonical form
+// returns pointer to terminal NUL in a->work
+char *make_ASCII_word(element_t *a) {
+  char c, *p = a->word, *q = a->work;
+  while (c = *p++)
+    if (isascii(c))
+      *q++ = c;
+  *q = 0;
+  return q;
 }
 
 // transform word to pure lowercase letters
@@ -383,11 +405,77 @@ char *make_shiftword(element_t *a) {
   return q;
 }
 
+void generate_substrings(string &word, vector<string> &substrings) {
+  unordered_set<mask_t> exists[mask_length + 1];
+
+  for (size_t length = 1; length <= max_substring_length; ++length) {
+    for (const char *p = word.c_str(); p[length - 1]; ++p) {
+      mask_t mask = 1;
+      bool good = true;
+      for (size_t i = length; i-- && good; ) { // insert letters in reverse order for ease of unpacking
+	if (isupper(p[i]))
+	  mask = (mask << 5) | (tolower(p[i]) - 'a');
+	else if (islower(p[i]))
+	  mask = (mask << 5) | (p[i] - 'a');
+	else
+	  good = false;
+      }
+      if (good)
+	exists[length].insert(mask);
+    }
+  }
+  for (size_t length = 1; length <= max_substring_length; ++length)
+    for (mask_t m : exists[length]) {
+      string w;
+      while (m != 1) {
+	w += 'a' + (m & 0x1f);
+	m >>= 5;
+      }
+      substrings.push_back(w);
+    }
+}
+
+void length_limited_power_set(vector<string> &subsets, string str, int index = 0, string curr = "")
+{
+  if (index == str.length())
+    // base case
+    subsets.push_back(curr);
+  else {
+    // Two cases for every character
+    // (1) We consider the character as part of current subset
+    // (2) We do not consider current character as part of current subset
+    // do not build subsets longer than max_subset_length
+    if (max_subset_length != 0 && curr.size() < max_subset_length)
+      length_limited_power_set(subsets, str, index + 1, curr + str[index]);
+    length_limited_power_set(subsets, str, index + 1, curr);
+  }
+}
+
+void generate_subsets(string &word, vector<string> &subsets) {
+  unordered_set<mask_t> exists[mask_length + 1];
+
+  mask_t mask = 0;
+  for (const char *p = word.c_str(); *p; ++p)
+    if (isupper(*p))
+      mask |= 1 << (tolower(*p) - 'a');
+    else if (islower(*p))
+      mask |= 1 << (*p - 'a');
+  string letters;
+  for (mask_t y = mask; y; ) {
+    int x = ffs(y) - 1;
+    letters += 'a' + x;
+    y &= ~(1 << x);
+  }
+  length_limited_power_set(subsets, letters);
+}
+
 struct lookup_t {
   const char *type;
   char *(*function)(element_t *);
   bool is_numeric = false;
+  bool is_primary = false;
 } lookup[] = {
+  {"ASCII_word", make_ASCII_word, false, true},
   {"consonancy", make_consonancy},
   {"consonant_list", make_consonant_list},
   {"dictionary_word", make_dictionary_word},
@@ -418,15 +506,70 @@ string escape(const char *s, const char *escape_chars) {
   return retval;
 }
 
+// output one line, which is SQL insert statement for word, or CSV of word, or raw form of word
+void process_word(const string &primary_word, const string &word) {
+  const char *sep = "";
+  if (SQL)
+    cout << "insert into " << table_name << " values (";
+  for (auto l : lookup) {
+    element_t a;
+    a.word = const_cast<char *>(l.is_primary ? primary_word.c_str() : word.c_str());
+    a.work = reinterpret_cast<char *>(malloc(word.length() * 10)); 
+    l.function(&a);
+    if (CSV) {
+      if (l.is_numeric)
+	cout << sep << a.work;
+      else
+	cout << sep << "\"" << escape(a.work, "\\,\"") << "\"";
+    } else if (SQL) {
+      if (l.is_numeric)
+	cout << sep << a.work;
+      else
+	cout << sep << "'" << escape(a.work, "\\,'") << "'";
+    } else
+      cout << sep << a.work;
+    free(a.work);
+    sep = (CSV | SQL) ? "," : "\t";
+  }
+  if (SQL)
+    cout << ")";
+  cout << endl;
+}
+
 int main(int argc, char *argv[]) {
 
-  for (short c; (c = getopt(argc, argv, ":CSv")) != -1; )
+  for (short c; (c = getopt(argc, argv, ":CSl:s:t:v")) != -1; )
     switch (c) {
     case 'C':
       CSV = true;
       break;
     case 'S':
       SQL = true;
+      break;
+    case 'l':
+      max_subset_length = atoi(optarg);
+      if (max_subset_length > mask_length) {
+	cerr << "maximum subset length is: " << mask_length << endl;
+	exit(1);
+      }
+      if (max_substring_length) {
+	cerr << "only one of subset and substring may be specified" << endl;
+	exit(1);
+      }
+      break;
+    case 's':
+      max_substring_length = atoi(optarg);
+      if (max_substring_length > mask_length) {
+	cerr << "maximum substring length is: " << mask_length << endl;
+	exit(1);
+      }
+      if (max_subset_length) {
+	cerr << "only one of subset and substring may be specified" << endl;
+	exit(1);
+      }
+      break;
+    case 't':
+      table_name = optarg;
       break;
     case 'v':
       ++verbose;
@@ -448,35 +591,44 @@ int main(int argc, char *argv[]) {
     exit(2);
   }
   init_tables();
-  for (string line; getline(in, line); ) {
-
-    if (CSV)
-      cout << "\"" << escape(line.c_str(), "\\,\"") << "\"";
-    else if (SQL)
-      cout << "insert into word values '" << escape(line.c_str(), "\\,'") << "'";
-    else 
-      cout << line;
+  if (verbose) {
+    const char *sep = "";
+    if (SQL)
+      cout << "create table " << table_name << " (";
     for (auto l : lookup) {
-      element_t a;
-      a.word = const_cast<char *>(line.c_str());
-      a.work = reinterpret_cast<char *>(malloc(line.length() * 10)); 
-      l.function(&a);
-      if (CSV) {
-	if (l.is_numeric)
-	  cout << "," << a.work;
-	else
-	  cout << ",\"" << escape(a.work, "\\,\"") << "\"";
-      } else if (SQL) {
-	if (l.is_numeric)
-	  cout << "," << a.work;
-	else
-	  cout << ",'" << escape(a.work, "\\,'") << "'";
-      } else if (verbose)
-        cout << '\t' << l.type << "=" << a.work;
-      else
-        cout << '\t' << a.work;
-      free(a.work);
+      if (CSV)
+	cout << sep << "\""
+	  << ((!l.is_primary && max_substring_length) ? "substring_" : "")
+	  << ((!l.is_primary && max_subset_length) ? "subset_" : "")
+	  << l.type << "\"";
+      else if (SQL)
+	cout << sep
+	  << ((!l.is_primary && max_substring_length) ? "substring_" : "")
+	  << ((!l.is_primary && max_subset_length) ? "subset_" : "")
+	  << l.type << (l.is_numeric ? " double" : " varchar(255)");
+      else 
+	cout << sep
+	  << ((!l.is_primary && max_substring_length) ? "substring_" : "")
+	  << ((!l.is_primary && max_subset_length) ? "subset_" : "")
+	  << l.type;
+      sep = (CSV | SQL) ? "," : "\t";
     }
+    if (SQL)
+      cout << ")";
     cout << endl;
+  }
+  for (string word; getline(in, word); ) {
+    if (max_substring_length) {
+      vector<string> generated_substrings;
+      generate_substrings(word, generated_substrings);
+      for (string substring : generated_substrings)
+	process_word(word, substring);
+    } else if (max_subset_length) {
+      vector<string> generated_subsets;
+      generate_subsets(word, generated_subsets);
+      for (string subset : generated_subsets)
+	process_word(word, subset);
+    } else
+      process_word(word, word);
   }
 }

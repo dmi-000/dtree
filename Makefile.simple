@@ -1,0 +1,52 @@
+# Simplified makefile for coro branch - use system defaults
+
+CXX := $(shell which clang++ 2>/dev/null || which g++ 2>/dev/null || echo clang++)
+
+# Use system default C++ standard
+CXXSTD := -std=c++17
+
+# System include paths
+CXXFLAGS := $(CXXSTD) -fno-omit-frame-pointer
+
+# Boost include (if needed)
+ifneq ($(wildcard /opt/homebrew/include/boost/version.hpp),)
+  CXXFLAGS += -I/opt/homebrew/include
+endif
+
+# LLVM include (if needed)
+ifneq ($(wildcard /opt/homebrew/opt/llvm/include/c++/v1),)
+  CXXFLAGS += -isystem/opt/homebrew/opt/llvm/include/c++/v1
+endif
+
+ERROR_LEVEL := -1
+FXX := /usr/local/bin/afl/afl-clang++
+FUZZ := /usr/local/bin/afl/afl-fuzz
+FENV := AFL_NO_ARITH=1 AFL_EXIT_WHEN_DONE=1 AFL_HANG_TMOUT=100
+FDIR := fuzz
+SPLIT := perl -pe 'BEGIN{$$a="aa"}open STDOUT,">$$ARGV[0]".$$a++;END{}' -
+
+.SECONDARY:
+.SUFFIXES:
+
+%.test.log: %.test.out $(FDIR)/%.in/aa
+	perl -MList::Util=shuffle -e 'print shuffle <>' $(FDIR)/$(*F).in/* | tee $(*F).test.in | ./$(*F).test.out 2>&1 | tee  $@
+
+all: out.test.out string.test.out container.test.out number.test.out interval.test.out
+
+interval.test.out: qtl/number.h qtl/container.h
+
+%.out: %.cpp
+	$(CXX) $(CXXFLAGS) -o $@ -g3 $<
+
+%.test.out: qtl/%.h qtl/out.h qtl/string.h
+	mkdir -p compiles
+	( $(CXX) $(CXXFLAGS) -o $@ -g3 -DTEST_H='"'$<'"' test.cpp 2>&1 && cp -av $? compiles ) | tee ./$(*F).make.log
+
+%.test.out: qtl/%.hpp
+	$(CXX) $(CXXFLAGS) -o $@ -DTEST_H='"'$<'"' test.cpp
+
+cleanlog:
+	rm -f *.{test,error}.log
+
+clean: cleanlog
+	rm -f *.out

@@ -1,6 +1,7 @@
 #!/bin/bash -x
 # run this script in the same directory as your makefile!
-make
+set -x
+make sql.test.out
 if [[ ! -s sql.dat.99 ]] ; then 
    make canonical.out
    rm *.map # shared map not working
@@ -9,4 +10,9 @@ if [[ ! -s sql.dat.99 ]] ; then
 fi
 cp -av  sql.dat.99 sql.dat # restore default
 rm *.map # shared map not working
-(echo 'select column(1),NUMERIC_TO_STRING(column(9),column(10)) from word where column(9)*column(10) <= column(9)+ column(10);' ; cat ) | ./sql.test.out
+(
+#    echo 'ALIAS word.ASCII_word=column(1),word.dictionary_word=column(4), word.letter_product=column(9), word.letter_sum=column(10);' ;
+    ./canonical.out -Sv < /dev/null;
+echo 'select * from word;
+select ASCII_word,NUMERIC_TO_STRING(letter_product,letter_sum) from word where letter_product*letter_sum <= letter_product+letter_sum;' ; cat ) | ./sql.test.out 
+

@@ -301,7 +301,17 @@ public:
      return ret;
   };
 
-  std_t& std_(){ if( !_opt ){ _opt=""s; } return *_opt; }
+  std_t& std_(){
+    //    if( !_opt ){ _opt=""s; } return *_opt;
+    if( !_opt ){
+      if( _this.size()==0 ){
+          _opt=""s;
+      }else{
+	_opt=std::string(_this.data(),_this.size());
+      }
+    }
+    return *_opt; 
+  }
   std_t std_()const{
     if( !_opt ){
       if( _this.size()==0 ){
@@ -445,6 +455,7 @@ public:
   string operator-(){
     NOTRACE( std::cerr << __PRETTY_FUNCTION__ << '(' << qtl::visible(*_opt) << ')' << '\n'; )
       if( empty()||is_null() ){ return *this; }
+    std_(); /*****/
       assert( _opt->data()==_this.data() );
     for( auto &c:*_opt ){
 #if 1
@@ -566,13 +577,13 @@ public:
       /**/NOTRACE(std::cout << __PRETTY_FUNCTION__ << " " << __LINE__ << std::endl;)
 #if 0
       if( p!=e && *p=='\0' ){
-#elsif 0
+#elif 0
       using boost::spirit::x3::byte_;
       using boost::spirit::x3::char_;
       using boost::spirit::char_encoding::ascii;
       if( parse(p,e, &(byte_(0)>>byte_),c) ){
       //      if( parse(p,e, &(char_(0)>>char_(0x80,0xff)),c) ){
-#elsif 0
+#elif 0
       }}
 #else
       if( P()!=E() && *P()=='\0' && P()+1!=E() && (unsigned char)*(P()+1)>=0x80 ){
@@ -1098,10 +1109,10 @@ std::cout << lex::string("abc\0\1\0"s) << '\n';
   std::cout << lex::string("abc\1"s) << '\n';
   std::cout << lex::string("abc\1\0"s) << '\n';
   std::cout << lex::string("abc\1\1"s) << '\n';
-  std::cout << lex::string::_eof<0>() << '\n'<<std::flush;
-  std::cout << lex::string::_eof<-2>() << '\n'<<std::flush;
+  qtl::cout << lex::string::_eof<0>() << '\n'<<std::flush;
+  qtl::cout << lex::string::_eof<-2>() << '\n'<<std::flush;
   //  std::cout << lex::string::eof<-2> << '\n'<<std::flush;
-    std::cout << lex::string::_eof<-9>() << '\n'<<std::flush;
+    qtl::cout << lex::string::_eof<-9>() << '\n'<<std::flush;
   //  std::cout << lex::string::eof<-9> << '\n'<<std::flush;
     std::cout << qtl::visible(lex::eof(1)) << '\n'<<std::flush;
     std::cout << qtl::visible(lex::eof(0)) << '\n'<<std::flush;
