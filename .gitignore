@@ -1,0 +1,50 @@
+# Build artifacts
+*.test.out
+*.asan.test.out
+*.ubsan.test.out
+*.san.test.out
+*.fuzz.out
+*.dSYM/
+compiles/
+fuzz/
+
+# Build logs
+*.make.log
+*.make.clang++.log
+*.make.g++.log
+build.log
+build_test.log
+
+# Session artefacts / scratch
+*.BACKUP
+*.bak
+makefile.BACKUP
+qtl.BACKUP-*/
+qtl.03-24/
+qtl.compiles/
+remove_macros.py
+remove_trace.py
+
+# Session documentation noise
+BUILD_STATUS_AND_NEXT_STEPS.md
+CONSEQUENCES_OF_DISABLED_CODE.md
+CPP20_STD_COROUTINES.md
+CPP_STANDARD_STATUS.md
+FINAL_STATUS_CXX20_BUILD.md
+FIXES_APPLIED_8_TESTS_BUILDING.md
+MACRO_REMOVAL_TOOL.md
+PREEXISTING_BUGS_ANALYSIS.md
+SANITIZER_FUZZ_DEBUG_GUIDE.md
+SANITIZER_STATUS.md
+WORKING_BUILD_CONFIG.md
+
+# Data files
+sql.dat
+sql.dat.canon.gz.*
+sql.dat.words
+
+# Export transcripts
+2026-*.txt
+
+# macOS
+.DS_Store
