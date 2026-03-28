@@ -2415,48 +2415,45 @@ template<typename R>
     TRACE( if( ret ){ std::cerr << *ret << '\n'; } )
     return ret;
   }
+  static std::tuple<int,boundary_t> partcount(int i, const sample<row> &p, const sample<row> &f, const std::set<boundary_t> &B){
+    TRACE( std::cerr << __PRETTY_FUNCTION__ << "(\n" << i << ","  << p << ",\n" << f << "," << B << ")" << '\n'; )
+    std::tuple<int,boundary_t> ret={-1,{}};
+    using val_t=std::remove_cv_t<std::remove_reference_t<decltype((*p.begin())[i])>>;
+    if( p.empty()||f.empty() ){ return ret; }
+    std::vector<val_t> pi;
+    std::vector<val_t> fi;
+    fi.reserve(f.size());
+    for( auto x:f ){
+      if( i<x.size() ){ fi.push_back( x[i] ); }
+    }
+    if( f.size()<=0 ){ return ret; }
+    pi.reserve(p.size());
+    for( auto x:p ){
+      if( i<x.size() ){ pi.push_back( x[i] ); }
+    }
+    std::vector<decltype(pi.begin())>pp;
+    std::vector<decltype(fi.begin())>fp;
+    pp.reserve(B.size());
+    fp.reserve(B.size());
+    TRACE( std::cerr << pi.size() << ":" << fi.size() << "\n"; )
+    for( auto b:B ){
+      auto bp=[b](val_t x){ return x<b; };
+      pp.push_back(std::partition(pp.empty()?pi.begin():pp.back(),pi.end(),bp));
+      fp.push_back(std::partition(fp.empty()?fi.begin():fp.back(),fi.end(),bp));
+      NOTRACE( std::cerr << b <<":"<< pp.back()-pi.begin() << ":" << fp.back()-fi.begin() << "\n"; )
+      if( pp.back()==pi.begin() && fp.back()!=fi.begin() ){
+        ret={fp.back()-fi.begin(),b};
+      }else if( pp.back()==pi.end() && fp.back()!=fi.end() ){
+        if( std::get<0>(ret) < fi.end()-fp.back() ){
+          ret={fi.end()-fp.back(),b};
+        }
+        break;
+      }
+    }
+    TRACE( std::cerr << __FUNCTION__ << "=" << ret << '\n'; )
+    return ret;
+  }
 #endif
-
-
-//   static std::tuple<int,boundary_t> partcount(int i, const sample<row> &p, const sample<row> &f, const std::set<boundary_t> &B){
-//     TRACE( std::cerr << __PRETTY_FUNCTION__ << "(\n" << i << ","  << p << ",\n" << f << "," << B << ")" << '\n'; )
-//     std::tuple<int,boundary_t> ret={-1,{}};
-//     using val_t=std::remove_cv_t<std::remove_reference_t<decltype(p[0][i])>>;
-//     if( p.empty()||f.empty() ){ return ret; }
-//     std::vector<val_t> pi;
-//     std::vector<val_t> fi;
-//     fi.reserve(f.size());
-//     for( auto x:f ){
-//       if( i<x.size() ){ fi.push_back( x[i] ); }
-//     }
-//     if( f.size()<=0 ){ return ret; }
-//     pi.reserve(p.size());
-//     for( auto x:p ){
-//       if( i<x.size() ){ pi.push_back( x[i] ); }
-//     }
-//     std::vector<decltype(pi.begin())>pp;
-//     std::vector<decltype(fi.begin())>fp;
-//     pp.reserve(B.size());
-//     fp.reserve(B.size());
-//     TRACE( std::cerr << pi.size() << ":" << fi.size() << "\n"; )
-//     for( auto b:B ){
-//       auto bp=[b](val_t x){ return x<b; };
-//       pp.push_back(std::partition(pp.empty()?pi.begin():pp.back(),pi.end(),bp));
-//       fp.push_back(std::partition(fp.empty()?fi.begin():fp.back(),fi.end(),bp));
-//       NOTRACE( std::cerr << b <<":"<< pp.back()-pi.begin() << ":" << fp.back()-fi.begin() << "\n"; )
-// 	if( pp.back()==pi.begin() && fp.back()!=fi.begin() ){
-// 	  ret={fp.back()-fi.begin(),b};
-// 	}else if( pp.back()==pi.end() && fp.back()!=fi.end() ){
-// 	  if( std::get<0>(ret) < fi.end()-fp.back() ){
-// 	    ret={fi.end()-fp.back(),b};
-//           }
-// 	  break;
-// 	}
-//     }
-//     TRACE( std::cerr << __FUNCTION__ << "=" << ret << '\n'; )
-//     return ret;
-//   }
-// #endif
   //     auto partcount(int i,const rows &p,const rows &f,const lex::string &s){
   //       return partcount(i,p,f,std::array<boundary_t,2>{{{s,infi},{s,supre}}});
   //     }

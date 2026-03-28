@@ -329,10 +329,9 @@ static auto const select_clause=
 	   std::cout << "WHERE " << at_c<2>( _attr(ctx) )->stringify() <<'\n';
          }
 	 NOTRACE( std::cout << file << '\n'; );
-         auto v=file[ from ];
-         if( at_c<2>(_attr(ctx)) ){
-//            v=v[at_c<2>(_attr(ctx))->bind( symtab[from] )];
-         }
+         auto v = at_c<2>(_attr(ctx))
+             ? file[from][at_c<2>(_attr(ctx))->bind(symtab[from])]
+             : file[from];
 	 TRACE(std::cout << v.predicate << '\n'; )
 	 for( auto r:v ){
 	   NOTRACE( continue; /* profile just the query with no output */)
