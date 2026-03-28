@@ -54,6 +54,34 @@ class qtl::number; // contains values from std::is_arithmetic type or decfloat, 
 ```//"e" is dropped from (Stephen) Kleene, as "e" is dropped from (George) Boole```\
 @emckean, is there a way to have both c++ syntax highlighting and links on the same line?
 
+#### qtl/radix_map.h
+```c++
+// Persistent radix tree (trie) over lex::string keys, backed by memory-mapped files
+// Used internally by qtl::store as its underlying index
+template<typename Value, ...>
+class radix_map {
+  // Keys stored in memcmp order — same ordering used by lex::string, number, scalar
+  // Nodes are allocated in a mmap'd file; data survives process restart
+  // Multiple processes can share the same file (POSIX OFD locking for safety)
+  iterator find(const key_type &k);
+  iterator lower_bound(const key_type &k);
+  iterator upper_bound(const key_type &k);
+  std::pair<iterator,bool> insert(const value_type &v);
+  // Note: std::binary_function replaced by std::__binary_function for C++20 compatibility
+};
+// The file-backed design means qtl::store queries survive process restart
+// and can be accessed concurrently across processes via the shared allocator.
+```
+
+#### qtl/shared_memory_allocator.h
+```c++
+// C++ allocator backed by POSIX mmap'd files, supporting cross-process sharing
+// Used by radix_map to keep tree nodes in a file that outlives the process
+// Power-of-2 allocation sizes with per-process freelist in the mapped region
+// POSIX OFD (open file description) locks serialise concurrent writes
+// todo: garbage collection and node coalescing for erase() support
+```
+
 #### qtl/bounds.h
 ```c++
 template<typename T> class qtl::bounds<T>; // T is a scalar type suporting <=>, can be number or string
@@ -265,61 +293,122 @@ auto p=boost:spirit::x3::phrase_parse( string.begin(),string.end(), qtl::expr_ru
 ### qtl/store.h
 ```c++
 // use interval arithmetic and trinary logic to query a database
-lval operator[](qtl::expr); // query on expression predicate
-lval operator[](std::vector<scalar>); // query on prefix
-operator=(lval,std::vector<scalar>); // store value
-operator=(lval,std::nullptr_t); // delete value
-for( auto x::lvalue ){ qtl::cout << x; } // print values satisfying query
-/* todo:≈
+```
+
+##### sample\<T\>
+```c++
+// Statistical reservoir sample of rows, used in tree-splitting heuristics
+// Keeps O(lg²(count)) elements out of count push_back() calls
+// (logarithmic bucketing: sample size grows as ∫ lg(x)/x dx ∝ lg²(n))
+// Refactored from vector inheritance to composition for C++17/20 compatibility
+template<typename T>
+class sample {
+  std::vector<T> base_vec_;  // O(lg²(count)) elements
+public:
+  int count = 0;             // total elements seen (not stored size)
+  void push_back(const T&);  // probabilistically keeps elements
+  auto begin() const; auto end() const; auto size() const; auto empty() const;
+};
+// Access elements via iteration — no operator[] (use *sample.begin() or range-for)
+```
+
+##### lval — live query handle
+```c++
+// Returned by store::operator[]; represents a lazy query over the radix_map index.
+// Internally holds a path::requirements predicate (prefix + optional expr filter)
+// and drives coroutine-based search via recursive_generator<qtl::row>.
+
+class lval : public recursive_generator<qtl::row> {
+  std::shared_ptr<class lattice> l;
+  path::requirements predicate;
+public:
+  lval(const row &prefix, const optexpr &filter);
+  lval(const path::requirements &r);
+  lval(const lval &);          // copy constructor OK
+  // copy assignment DELETED (recursive_generator deletes it)
+
+  lval operator[](const expr &e);  // apply WHERE expression filter → new lval (copy-ctor)
+  lval operator[](const row  &v);  // restrict to prefix → new lval
+  lval& operator=(const row  &v);  // INSERT row
+  lval& operator=(std::nullptr_t); // DELETE matching rows
+};
+
+// Query pattern:
+store file("data.sql");
+auto v = file["tablename"];               // open table
+auto w = file["tablename"][predicate];    // table + WHERE (copy-constructs w from v[predicate])
+for (auto r : w) { /* r is a qtl::row */ }
+
+// Note: v = v[predicate] does NOT compile (copy-assignment deleted).
+// Always initialise a new lval: auto w = v[predicate];
+
+/* todo:
   lval operator[]( project subset of columns );
   allows unified map< variant< prefix, expression, projection >, vector<column selection> > abstraction
-  and makes for( auto x::lvalue ){ qtl::cout << x; } more practical when you only want specific columns
-  also makes lvalue = vector<value> and lvalue = vector<vector<value>> more useful
-  possible implementation:
-  extend lval operator[](std::vector<scalar>) // query on prefix
-  to lval operator[](std::vector<interval>) // where the False or Empty interval, means to ignore that column
-  or use std::ignore?
+  possible implementation: extend operator[](std::vector<scalar>) to operator[](std::vector<interval>)
+  where a False/Empty interval means "ignore this column"
 */
+```
+
+##### Coroutine internals
+```c++
+// lval::iterator wraps std::optional<recursive_generator<qtl::row>>
+// co_search_vertex / co_search_leaf are C++20 coroutines that lazily yield
+// matching rows by traversing the radix_map lattice and evaluating the predicate
+// using interval arithmetic (kleen::T = row satisfies predicate).
+// std20_recursive_generator.hpp provides the recursive_generator template
+// (replaces the former cppcoro dependency).
 ```
 
 ### qtl/sql.h
 ```c++
-// toy sql parser turning simple sql queries into qtl::store[] queries
-#if 0
-@Erin, I'm not sure there's much point in documenting the behavior of this module,
-which is basically as much of SQL as one cares to implement, since abundant SQL doccumentation already exists.
-Rather, I think we want to explain the underlying model well enough
-so that users can understand how to implement whatever SQL or other behavior they may be interested in.
+// Toy SQL parser — turns SQL queries into qtl::store[] queries via boost::spirit::X3
+// Implemented statements: SELECT … FROM … [WHERE expr], DELETE FROM … [WHERE expr],
+//   INSERT … SET col=val [INTO table], SET col=val [USING namespace]
+// Parsed at runtime from stdin; useful as a demo/test of the store and expr layers.
 
-The basic abstraction I want to present would be
-  std::map<selector,selection>
-where selection is a vector (rows) of vectors (columns) of values,
-and selection can be an arbitrary predicate to be satisfied by the values within the selected rows,
-or a restriction to columns with particular values [or to a particular subset of columns].
-You'd be able to retrieve a selection with
-  selection = map[selector];
-or insert new selections with
-  map[selector] = selection;
-also
-  selection = selection[selector];
-could be used to refine a selection.
-(so in the initial map[selection], map can be thought of as a selection with a universal selector)
+// Example:
+//   SELECT * FROM mytable WHERE col0 > 42;
+//   SELECT col1, col2 FROM mytable WHERE col0 == "foo";
+//   DELETE FROM mytable WHERE col1 < 0;
 
-This may seem like a stretch of the std::map concept, and unconventional in that the result of
-  map[selector]
-can be changed by
-  map[different_selector] = selection;
-But I don't see a guarantee in the c++ documentation that std::map values must be independent for different keys
-Or, it may be conceptually better to think of the object returned by map[selector] as an accessor to the actual selection
-Especially when shared memory is implemented and different users can influence each others results.
+// WHERE clause implementation:
+//   auto v = condition ? file[table][predicate.bind(symtab)] : file[table];
+//   for (auto r : v) { ... }
+// (lval copy-constructor used, not copy-assignment — see lval note in store.h)
 
-note on the name Predicate Lattice:
-I find an existing related notion of a Concept Lattice
-<https://en.wikipedia.org/wiki/Formal_concept_analysis#Concept_lattice_of_a_formal_context>
-Like we might think of boundaries as a Dedekind–MacNeille completion of scalars, 
-a Concept Lattice seems to be a Dedekind–MacNeille completion of a partial order of attributes
-<https://en.wikipedia.org/wiki/Dedekind%E2%80%93MacNeille_completion#Examples>
-#endif
+// Symbol table: col0…col9 map to column index expressions (0_column … 9_column)
+// Value table: TRUE/FALSE/MAYBE map to kleen interval constants
+```
+
+##### Design notes on the underlying abstraction
+```c++
+// The conceptual model is:
+//   std::map<selector, selection>
+// where selection is a vector (rows) of vectors (columns) of values, and selector
+// can be a prefix restriction, an expression predicate, or a column projection.
+//
+//   selection = map[selector];         // retrieve
+//   map[selector] = selection;         // insert
+//   selection = selection[selector];   // refine
+//
+// map[selector] returns an accessor (lval) rather than a copy; different selectors
+// on the same map can affect each other (especially with shared-memory stores).
+//
+// note on the name Predicate Lattice:
+// Related to Concept Lattice <https://en.wikipedia.org/wiki/Formal_concept_analysis>
+// Boundaries form a Dedekind-MacNeille completion of scalars;
+// concept lattice is a Dedekind-MacNeille completion of a partial order of attributes.
+// <https://en.wikipedia.org/wiki/Dedekind%E2%80%93MacNeille_completion#Examples>
+```
+
+### qtl/std20_recursive_generator.hpp
+```c++
+// C++20 coroutine-based recursive_generator<T>
+// Drop-in replacement for cppcoro::recursive_generator (no external dependency)
+// Supports co_yield value and co_yield nested_generator for recursive traversal
+// Used by lval::co_search_vertex / co_search_leaf to lazily produce matching rows
+// Requires compiler support for <coroutine> (clang 14+ / g++ 11+)
 ```
 
 ### qtl/randstream.h
